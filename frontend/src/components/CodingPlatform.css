@@ -1,0 +1,286 @@
+/* Custom styles for the Coding Platform */
+
+/* Code Editor Enhancements */
+.code-editor {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  font-size: 14px;
+  line-height: 1.5;
+  tab-size: 4;
+  -moz-tab-size: 4;
+}
+
+.code-editor:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Line number styling */
+.line-numbers {
+  background: linear-gradient(to bottom, #1f2937, #111827);
+  border-right: 1px solid #374151;
+  user-select: none;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Error line highlighting */
+.error-line {
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid #ef4444;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Resizer styling */
+.resizer {
+  position: relative;
+  background: linear-gradient(to right, #d1d5db, #9ca3af, #d1d5db);
+  transition: all 0.2s ease;
+}
+
+.resizer:hover {
+  background: linear-gradient(to right, #3b82f6, #2563eb, #3b82f6);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.resizer::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.resizer:hover::before {
+  opacity: 1;
+}
+
+/* Question navigation enhancements */
+.question-nav-button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.question-nav-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.question-nav-button:hover::before {
+  left: 100%;
+}
+
+/* Status indicators */
+.status-indicator {
+  position: relative;
+  overflow: hidden;
+}
+
+.status-indicator.completed::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-top: 8px solid #10b981;
+}
+
+.status-indicator.error::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-top: 8px solid #ef4444;
+}
+
+/* Test result animations */
+.test-result-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.test-result-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.3s ease;
+}
+
+/* Button enhancements */
+.action-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.action-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
+.action-button:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Timer styling */
+.timer-critical {
+  animation: timerPulse 1s infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { 
+    background-color: rgb(254, 242, 242);
+    border-color: rgb(252, 165, 165);
+  }
+  50% { 
+    background-color: rgb(254, 226, 226);
+    border-color: rgb(248, 113, 113);
+  }
+}
+
+/* Network status indicator */
+.network-status {
+  position: relative;
+}
+
+.network-status::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: networkPulse 2s infinite;
+}
+
+@keyframes networkPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Code completion hints */
+.code-hint {
+  color: #6b7280;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.6;
+}
+
+/* Scrollbar styling for dark theme */
+.dark-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Light scrollbar for problem panel */
+.light-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.light-scrollbar::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+
+.light-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.light-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .code-editor {
+    font-size: 12px;
+  }
+  
+  .question-nav-button {
+    height: 48px;
+    font-size: 12px;
+  }
+}
+
+/* Focus states for accessibility */
+.focus-visible:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Loading states */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Success/Error state animations */
+.success-flash {
+  animation: successFlash 0.5s ease;
+}
+
+@keyframes successFlash {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(16, 185, 129, 0.1); }
+  100% { background-color: transparent; }
+}
+
+.error-flash {
+  animation: errorFlash 0.5s ease;
+}
+
+@keyframes errorFlash {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(239, 68, 68, 0.1); }
+  100% { background-color: transparent; }
+}

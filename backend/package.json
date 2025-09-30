@@ -1,0 +1,53 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js",
+    "start": "node index.js",
+    "init-db": "node init-db.js",
+    "setup-reports": "node init-db.js",
+    "setup-data": "node scripts/setup/seed-dashboard-data.js",
+    "migrate-unanswered": "node migrations/add-unanswered-questions-tracking.js",
+    "migrate-coding-results": "node migrations/add-detailed-coding-results.js",
+    "test-auth": "node scripts/testing/test-auth.js",
+    "test-comprehensive": "node scripts/testing/comprehensive-test.js",
+    "optimize-db": "node scripts/database/optimize-database.js",
+    "add-user-columns": "node scripts/database/add-user-columns.js",
+    "test-compilers": "node scripts/test-compilers.js",
+    "test-dsa": "node scripts/test-dsa.js",
+    "test-advanced-dsa": "node scripts/test-advanced-dsa.js",
+    "test-coding-integration": "node scripts/test-coding-integration.js",
+    "check-coding-system": "node scripts/check-coding-system.js",
+    "fix-db-schema": "node scripts/fix-database-schema.js",
+    "fix-complete-schema": "node scripts/fix-complete-schema.js",
+    "fix-email-column": "node scripts/fix-email-column.js",
+    "validate-env": "node scripts/validate-env.js",
+    "health-check": "node scripts/validate-env.js && node -e \"require('./models').sequelize.authenticate().then(() => console.log('✅ Database OK')).catch(e => {console.error('❌ Database Error:', e.message); process.exit(1);})\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.11.0",
+    "cors": "^2.8.5",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^17.0.1",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "google-auth-library": "^10.1.0",
+    "json2csv": "^5.0.7",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.1",
+    "mysql2": "^3.14.1",
+    "nodemailer": "^7.0.5",
+    "pdfkit": "^0.17.1",
+    "sequelize": "^6.37.7",
+    "uuid": "^11.1.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
