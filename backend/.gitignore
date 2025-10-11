@@ -22,6 +22,7 @@ outputs/
 *.class
 *.o
 *.so
+/dist/
 
 # Upload files
 uploads/*

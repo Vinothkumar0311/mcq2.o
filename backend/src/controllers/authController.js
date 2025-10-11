@@ -6,9 +6,11 @@ const config = require("../routes/config");
 const client = new OAuth2Client(config.google.clientId);
 
 // Always allowed emails from environment variables
-const ALWAYS_ALLOWED_EMAILS = process.env.ADMIN_EMAILS 
-  ? process.env.ADMIN_EMAILS.split(',').map(email => email.trim().toLowerCase())
-  : ['e22ec018@shanmugha.edu.in', 'vinothkumar@shanmugha.edu.in'];
+const ALWAYS_ALLOWED_EMAILS = process.env.ADMIN_EMAILS
+  ? process.env.ADMIN_EMAILS.split(",").map((email) =>
+      email.trim().toLowerCase()
+    )
+  : ["e22ec018@shanmugha.edu.in", "vinothkumar@shanmugha.edu.in"];
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -26,35 +28,35 @@ const generateToken = (user) => {
 exports.googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
-    
+
     if (!token) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Token is required" 
+      return res.status(400).json({
+        success: false,
+        error: "Token is required",
       });
     }
 
     if (!config.google.clientId) {
-      return res.status(500).json({ 
-        success: false, 
-        error: "Google Client ID not configured" 
+      return res.status(500).json({
+        success: false,
+        error: "Google Client ID not configured",
       });
     }
 
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: config.google.clientId,
-      clockTolerance: 900 // 15 minutes tolerance for clock skew
+      clockTolerance: 900, // 15 minutes tolerance for clock skew
     });
 
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
-    const lcEmail = (email || '').toLowerCase();
+    const lcEmail = (email || "").toLowerCase();
 
     // Check if email is always allowed (case-insensitive)
     if (ALWAYS_ALLOWED_EMAILS.includes(lcEmail)) {
       let user = await User.findOne({ where: { email: lcEmail } });
-      
+
       if (!user) {
         user = await User.create({
           googleId,
@@ -63,7 +65,13 @@ exports.googleLogin = async (req, res) => {
           profilePicture: picture,
         });
       }
-      
+
+      const userEmail = await LicensedUser.findOne({
+        where: { email: lcEmail },
+      });
+      const userDept = userEmail.department;
+      const userSin = userEmail.sin_number;
+
       const jwtToken = generateToken(user);
       return res.json({
         success: true,
@@ -72,6 +80,8 @@ exports.googleLogin = async (req, res) => {
           id: user.id,
           name: user.name,
           email: user.email,
+          dept: userDept,
+          userSIN: userSin,
           profilePicture: user.profilePicture,
           role: user.role,
         },
@@ -79,12 +89,14 @@ exports.googleLogin = async (req, res) => {
     }
 
     // Check if email exists in license_user table
-    const licensedUser = await LicensedUser.findOne({ where: { email: lcEmail } });
-    
+    const licensedUser = await LicensedUser.findOne({
+      where: { email: lcEmail },
+    });
+
     if (!licensedUser) {
       return res.status(403).json({
         success: false,
-        error: "Access denied. Email not found in licensed users."
+        error: "Access denied. Email not found in licensed users.",
       });
     }
 
@@ -106,6 +118,10 @@ exports.googleLogin = async (req, res) => {
       await user.save();
     }
 
+    const userEmail = await LicensedUser.findOne({ where: { email: lcEmail } });
+    const userDept = userEmail.department;
+    const userSin = userEmail.sin_number;
+
     const jwtToken = generateToken(user);
 
     res.json({
@@ -115,30 +131,32 @@ exports.googleLogin = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        dept: userDept,
+        userSIN: userSin,
         profilePicture: user.profilePicture,
         role: user.role,
       },
     });
   } catch (error) {
     console.error("Google login error:", error);
-    
+
     // Handle specific JWT timing errors
-    if (error.message && error.message.includes('Token used too early')) {
+    if (error.message && error.message.includes("Token used too early")) {
       return res.status(400).json({
         success: false,
         error: "Token timing issue. Please try logging in again.",
-        code: 'TOKEN_TIMING_ERROR'
+        code: "TOKEN_TIMING_ERROR",
       });
     }
-    
-    if (error.message && error.message.includes('Token expired')) {
+
+    if (error.message && error.message.includes("Token expired")) {
       return res.status(401).json({
         success: false,
         error: "Token has expired. Please login again.",
-        code: 'TOKEN_EXPIRED'
+        code: "TOKEN_EXPIRED",
       });
     }
-    
+
     res.status(500).json({
       success: false,
       error: error.message || "Authentication failed",
@@ -150,23 +168,32 @@ exports.googleLogin = async (req, res) => {
 exports.standardLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const lcEmail = (email || '').toLowerCase();
-    
+    const lcEmail = (email || "").toLowerCase();
+
     if (!lcEmail || !password) {
       return res.status(400).json({
         success: false,
-        error: "Email and password are required"
+        error: "Email and password are required",
       });
     }
 
     // Check if email is always allowed
     if (ALWAYS_ALLOWED_EMAILS.includes(lcEmail)) {
       let user = await User.findOne({ where: { email: lcEmail } });
-      
+
       if (!user) {
-        user = await User.create({ email: lcEmail, name: lcEmail.split('@')[0] });
+        user = await User.create({
+          email: lcEmail,
+          name: lcEmail.split("@")[0],
+        });
       }
-      
+
+      const userEmail = await LicensedUser.findOne({
+        where: { email: lcEmail },
+      });
+      const userDept = userEmail.department;
+      const userSin = userEmail.sin_number;
+
       const jwtToken = generateToken(user);
       return res.json({
         success: true,
@@ -174,6 +201,8 @@ exports.standardLogin = async (req, res) => {
         user: {
           id: user.id,
           name: user.name,
+          dept: userDept,
+          userSIN: userSin,
           email: user.email,
           role: user.role,
         },
@@ -181,30 +210,34 @@ exports.standardLogin = async (req, res) => {
     }
 
     // Check licensed user with email and sin_number as password
-    const licensedUser = await LicensedUser.findOne({ 
-      where: { 
-        email: lcEmail, 
+    const licensedUser = await LicensedUser.findOne({
+      where: {
+        email: lcEmail,
         sin_number: password,
-        activated: true 
-      } 
+        activated: true,
+      },
     });
-    
+
     if (!licensedUser) {
       return res.status(401).json({
         success: false,
-        error: "Invalid email or SIM number, or account not activated"
+        error: "Invalid email or SIM number, or account not activated",
       });
     }
 
     // Find or create user
     let user = await User.findOne({ where: { email: lcEmail } });
-    
+
     if (!user) {
       user = await User.create({
         email: lcEmail,
         name: licensedUser.name,
       });
     }
+
+    const userEmail = await LicensedUser.findOne({ where: { email: lcEmail } });
+    const userDept = userEmail.department;
+    const userSin = userEmail.sin_number;
 
     const jwtToken = generateToken(user);
 
@@ -214,6 +247,8 @@ exports.standardLogin = async (req, res) => {
       user: {
         id: user.id,
         name: user.name,
+        dept: userDept,
+        userSIN: userSin,
         email: user.email,
         role: user.role,
       },
@@ -222,7 +257,7 @@ exports.standardLogin = async (req, res) => {
     console.error("Standard login error:", error);
     res.status(500).json({
       success: false,
-      error: "Authentication failed"
+      error: "Authentication failed",
     });
   }
 };
@@ -234,18 +269,18 @@ exports.getMe = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        error: "User not found" 
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
       });
     }
 
     res.json({ success: true, user });
   } catch (error) {
     console.error("Get user error:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Server error" 
+    res.status(500).json({
+      success: false,
+      error: "Server error",
     });
   }
 };

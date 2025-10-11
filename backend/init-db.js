@@ -1,4 +1,4 @@
-const { sequelize, Passcode } = require('./models');
+const { sequelize, Passcode } = require('./src/models');
 
 async function initializeDatabase() {
   try {

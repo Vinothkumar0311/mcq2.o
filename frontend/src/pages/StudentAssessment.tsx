@@ -100,7 +100,8 @@ const StudentAssessment = () => {
       canStart = false;
       canBegin = true;
       message = `Test in progress - ${timeUntilEnd} minutes remaining`;
-    } else {
+    } 
+    else {
       // After test end
       canStart = false;
       canBegin = false;
@@ -388,7 +389,8 @@ const StudentAssessment = () => {
                                 <Play className="w-4 h-4 mr-2" />
                                 Begin Test
                               </Button>
-                            ) : (
+                            ) 
+                            : (
                               <Button
                                 disabled
                                 className="bg-gray-400 cursor-not-allowed"
@@ -396,7 +398,8 @@ const StudentAssessment = () => {
                                 <Lock className="w-4 h-4 mr-2" />
                                 Not Available
                               </Button>
-                            )}
+                            )
+                            }
                           </>
                         );
                       })() : (

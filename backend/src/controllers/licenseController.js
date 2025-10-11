@@ -120,7 +120,7 @@ const sendActivationEmail = async (user) => {
           <li><strong>Email:</strong> ${user.email}</li>
           <li><strong>Password:</strong> ${user.sin_number}</li>
         </ul>
-        <p>Login at: <a href="http://localhost:3000">http://localhost:3000</a></p>
+        <p>Login at: <a href="http://localhost:8080/">http://localhost:8080/</a></p>
       `
     });
     console.log('Email sent successfully to:', user.email);

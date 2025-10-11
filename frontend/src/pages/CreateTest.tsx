@@ -953,6 +953,9 @@ const CreateTest = () => {
       const apiUrl = editingTestId 
         ? `${API_BASE_URL}/api/test/${editingTestId}/update`
         : `${API_BASE_URL}/api/test/create`;
+
+        console.log("the ur is", apiUrl);
+        console.log("the form data is", formData);
       
       const response = await fetch(apiUrl, {
         method: editingTestId ? 'PUT' : 'POST',

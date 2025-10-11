@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { executeJava } = require('../executeJava');
-const { executePython } = require('../executePython');
-const { executeCpp } = require('../executeCpp');
+const { executeJava } = require('../../executeJava');
+const { executePython } = require('../../executePython');
+const { executeCpp } = require('../../executeCpp');
 const { sanitizeFilePath, sanitizeForLog } = require('./security');
 
 const TEMP_DIR = path.join(__dirname, '../temp');

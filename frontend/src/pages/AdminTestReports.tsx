@@ -298,6 +298,7 @@ const AdminTestReports = () => {
       
       // Generate comprehensive PDF locally
       const student = studentData || studentResults.find(s => s.studentId === studentId);
+      console.log('Generating report for student:', student);
       if (!student) {
         throw new Error('Student data not found');
       }
@@ -338,7 +339,7 @@ const AdminTestReports = () => {
       pdf.text('Name: ' + studentName, 15, y + 8);
       pdf.text('Email: ' + (student.studentEmail || 'N/A'), 15, y + 16);
       pdf.text('Department: ' + (student.department || 'N/A'), 15, y + 24);
-      pdf.text('SIN: ' + (student.sin || 'N/A'), 110, y + 8);
+      pdf.text('SIN: ' + (student.studentId || 'N/A'), 110, y + 8);
       
       y += 40;
       
