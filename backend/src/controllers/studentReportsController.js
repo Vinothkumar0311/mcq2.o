@@ -632,7 +632,8 @@ exports.downloadTestReport = async (req, res) => {
        .text(`Percentage: ${percentage}%`)
        .text(`Status: ${percentage >= 60 ? 'PASS' : 'FAIL'}`, { 
          color: percentage >= 60 ? 'green' : 'red' 
-       });
+       }
+      );
     
     doc.moveDown();
     doc.fontSize(14).text('Test Duration:', { underline: true });

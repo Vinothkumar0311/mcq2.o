@@ -46,6 +46,7 @@ interface Section {
 
 const StudentAssessment = () => {
   const [passcode, setPasscode] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
   const [showPasscodeDialog, setShowPasscodeDialog] = useState(false);
   const [showPreTestScreen, setShowPreTestScreen] = useState(false);
@@ -66,20 +67,34 @@ const StudentAssessment = () => {
 
   const getTestTiming = (test: Test) => {
     if (!test.testDate || !test.startTime) {
-      return { canStart: false, canBegin: false, message: 'Test not scheduled', timeUntilStart: 0 };
+      return {
+        canStart: false,
+        canBegin: false,
+        message: "Test not scheduled",
+        timeUntilStart: 0,
+      };
     }
 
     const testStartDateTime = new Date(`${test.testDate}T${test.startTime}`);
-    const testDuration = test.Sections.reduce((total, s) => total + s.duration, 0);
-    const testEndDateTime = new Date(testStartDateTime.getTime() + (testDuration * 60000));
-    
-    const timeUntilStart = Math.floor((testStartDateTime.getTime() - currentTime.getTime()) / 60000);
-    const timeUntilEnd = Math.floor((testEndDateTime.getTime() - currentTime.getTime()) / 60000);
-    
+    const testDuration = test.Sections.reduce(
+      (total, s) => total + s.duration,
+      0
+    );
+    const testEndDateTime = new Date(
+      testStartDateTime.getTime() + testDuration * 60000
+    );
+
+    const timeUntilStart = Math.floor(
+      (testStartDateTime.getTime() - currentTime.getTime()) / 60000
+    );
+    const timeUntilEnd = Math.floor(
+      (testEndDateTime.getTime() - currentTime.getTime()) / 60000
+    );
+
     let canStart = false;
     let canBegin = false;
-    let message = '';
-    let countdown = '';
+    let message = "";
+    let countdown = "";
 
     if (currentTime < testStartDateTime) {
       // Before test start time
@@ -87,8 +102,10 @@ const StudentAssessment = () => {
         canStart = true;
         canBegin = false;
         const minutes = Math.floor(timeUntilStart);
-        const seconds = Math.floor(((testStartDateTime.getTime() - currentTime.getTime()) % 60000) / 1000);
-        countdown = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        const seconds = Math.floor(
+          ((testStartDateTime.getTime() - currentTime.getTime()) % 60000) / 1000
+        );
+        countdown = `${minutes}:${seconds.toString().padStart(2, "0")}`;
         message = `Test available in ${countdown}`;
       } else {
         canStart = false;
@@ -100,88 +117,149 @@ const StudentAssessment = () => {
       canStart = false;
       canBegin = true;
       message = `Test in progress - ${timeUntilEnd} minutes remaining`;
-    } 
-    else {
+    } else {
       // After test end
       canStart = false;
       canBegin = false;
-      message = 'Test time expired';
+      message = "Test time expired";
     }
 
-    return { canStart, canBegin, message, timeUntilStart, countdown, remainingTime: timeUntilEnd };
+    return {
+      canStart,
+      canBegin,
+      message,
+      timeUntilStart,
+      countdown,
+      remainingTime: timeUntilEnd,
+    };
   };
 
   useEffect(() => {
     const fetchTests = async () => {
       try {
         // Always fetch all scheduled tests for now
-        const response = await fetch('http://localhost:5000/api/test', {
-          method: 'GET',
+        const response = await fetch("http://localhost:5000/api/test", {
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         });
-        if (!response.ok) throw new Error('Failed to fetch tests');
-        
+        if (!response.ok) throw new Error("Failed to fetch tests");
+
         const allTests = await response.json();
-        const scheduledTests = allTests.filter((test: any) => 
-          test.status === 'scheduled'
+        const scheduledTests = allTests.filter(
+          (test: any) => test.status === "scheduled"
         );
-        
+
         // Fetch detailed test data for each test
+        // const transformedTests: Test[] = await Promise.all(
+        //   scheduledTests.map(async (test: any) => {
+        //     try {
+        //       const detailResponse = await fetch(`http://localhost:5000/api/test/${test.testId}`);
+        //       if (detailResponse.ok) {
+        //         const detailData = await detailResponse.json();
+        //         return {
+        //           testId: detailData.testId,
+        //           name: detailData.name,
+        //           description: detailData.description || "No description provided",
+        //           instructions: detailData.instructions || "No specific instructions provided",
+        //           testDuration: detailData.testDuration,
+        //           status: detailData.status || 'scheduled',
+        //           createdAt: detailData.createdAt,
+        //           testDate: detailData.testDate,
+        //           startTime: detailData.startTime,
+        //           windowTime: detailData.windowTime,
+        //           Sections: detailData.Sections?.map((section: any) => ({
+        //             id: section.id,
+        //             name: section.name,
+        //             duration: section.duration,
+        //             type: section.type,
+        //             instructions: section.instructions,
+        //           })) || []
+        //         };
+        //       }
+        //     } catch (error) {
+        //       console.error(`Error fetching details for test ${test.testId}:`, error);
+        //     }
+
+        //     // Fallback to basic data if detailed fetch fails
+        //     return {
+        //       testId: test.testId,
+        //       name: test.name,
+        //       description: test.description || "No description provided",
+        //       instructions: test.instructions || "No specific instructions provided",
+        //       testDuration: test.testDuration,
+        //       status: test.status || 'scheduled',
+        //       createdAt: test.createdAt,
+        //       testDate: test.testDate,
+        //       startTime: test.startTime,
+        //       windowTime: test.windowTime,
+        //       Sections: []
+        //     };
+        //   })
+        // );
+
+        const userData = JSON.parse(localStorage.getItem("user"));
+        const userEmail = userData?.email;
+
         const transformedTests: Test[] = await Promise.all(
           scheduledTests.map(async (test: any) => {
+            let detailedTest = { ...test, Sections: [] };
+
             try {
-              const detailResponse = await fetch(`http://localhost:5000/api/test/${test.testId}`);
+              const detailResponse = await fetch(
+                `http://localhost:5000/api/test/${test.testId}`
+              );
               if (detailResponse.ok) {
                 const detailData = await detailResponse.json();
-                return {
-                  testId: detailData.testId,
-                  name: detailData.name,
-                  description: detailData.description || "No description provided",
-                  instructions: detailData.instructions || "No specific instructions provided",
-                  testDuration: detailData.testDuration,
-                  status: detailData.status || 'scheduled',
-                  createdAt: detailData.createdAt,
-                  testDate: detailData.testDate,
-                  startTime: detailData.startTime,
-                  windowTime: detailData.windowTime,
-                  Sections: detailData.Sections?.map((section: any) => ({
-                    id: section.id,
-                    name: section.name,
-                    duration: section.duration,
-                    type: section.type,
-                    instructions: section.instructions,
-                  })) || []
+                detailedTest = {
+                  ...detailData,
+                  Sections:
+                    detailData.Sections?.map((section: any) => ({
+                      id: section.id,
+                      name: section.name,
+                      duration: section.duration,
+                      type: section.type,
+                      instructions: section.instructions,
+                    })) || [],
                 };
               }
             } catch (error) {
-              console.error(`Error fetching details for test ${test.testId}:`, error);
+              console.error(
+                `Error fetching details for test ${test.testId}:`,
+                error
+              );
             }
-            
-            // Fallback to basic data if detailed fetch fails
+
+            // ✅ Check if the user has already submitted this test
+            let submitted = false;
+            try {
+              const submissionCheck = await fetch(
+                `http://localhost:5000/api/test/check-submission?testId=${test.testId}&email=${userEmail}`
+              );
+              const submissionData = await submissionCheck.json();
+              console.log(`Submission data for test ${test.testId}:`, submissionData);
+              submitted = submissionData.submitted;
+              setIsSubmitted(submitted);
+            } catch (error) {
+              console.error(
+                `Error checking submission for test ${test.testId}:`,
+                error
+              );
+            }
+
             return {
-              testId: test.testId,
-              name: test.name,
-              description: test.description || "No description provided",
-              instructions: test.instructions || "No specific instructions provided",
-              testDuration: test.testDuration,
-              status: test.status || 'scheduled',
-              createdAt: test.createdAt,
-              testDate: test.testDate,
-              startTime: test.startTime,
-              windowTime: test.windowTime,
-              Sections: []
+              ...detailedTest,
+              submitted,
             };
           })
         );
-        
+
         setUpcomingTests(transformedTests);
         return;
-
       } catch (error) {
         console.error("Error fetching tests:", error);
-        const errorMessage = error.message.includes('fetch') 
+        const errorMessage = error.message.includes("fetch")
           ? "Cannot connect to server. Please check if the backend is running."
           : "Failed to load tests. Please try again later.";
         toast({
@@ -212,11 +290,14 @@ const StudentAssessment = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/passcode/validate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: passcode }),
-      });
+      const response = await fetch(
+        `http://localhost:5000/api/passcode/validate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: passcode }),
+        }
+      );
 
       const data = await response.json();
 
@@ -225,7 +306,8 @@ const StudentAssessment = () => {
         setShowPreTestScreen(true);
         toast({
           title: "Access Granted",
-          description: "Welcome to the assessment. Please review the instructions carefully.",
+          description:
+            "Welcome to the assessment. Please review the instructions carefully.",
         });
       } else {
         setPasscodeError(data.message || "Invalid passcode. Please try again.");
@@ -238,23 +320,23 @@ const StudentAssessment = () => {
 
   const handleBeginTest = () => {
     if (!selectedTest) {
-      console.error('No selected test found');
+      console.error("No selected test found");
       return;
     }
-    
-    console.log('Beginning test:', selectedTest);
-    
+
+    console.log("Beginning test:", selectedTest);
+
     setShowPreTestScreen(false);
     toast({
       title: "Test Started",
       description: "Good luck! The timer has begun.",
     });
-    
+
     // Navigate to test page
     try {
       navigate(`/student/test/${selectedTest.testId}`);
     } catch (error) {
-      console.error('Navigation error:', error);
+      console.error("Navigation error:", error);
       toast({
         title: "Navigation Error",
         description: "Failed to navigate to test. Please try again.",
@@ -283,7 +365,9 @@ const StudentAssessment = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold mb-2">📋 Assessment Center</h1>
-              <p className="text-blue-100">Your upcoming tests and assessments</p>
+              <p className="text-blue-100">
+                Your upcoming tests and assessments
+              </p>
             </div>
             <div className="text-right">
               <div className="text-xl font-bold">{allTests.length}</div>
@@ -321,15 +405,21 @@ const StudentAssessment = () => {
                         <Badge variant="outline" className="text-xs">
                           {test.testId}
                         </Badge>
-                        <Badge 
+                        <Badge
                           variant={
-                            test.status === 'scheduled' ? 'default' : 
-                            test.status === 'saved' ? 'secondary' : 'outline'
-                          } 
+                            test.status === "scheduled"
+                              ? "default"
+                              : test.status === "saved"
+                              ? "secondary"
+                              : "outline"
+                          }
                           className="text-xs"
                         >
-                          {test.status === 'scheduled' ? 'Scheduled' : 
-                           test.status === 'saved' ? 'Saved' : 'Draft'}
+                          {test.status === "scheduled"
+                            ? "Scheduled"
+                            : test.status === "saved"
+                            ? "Saved"
+                            : "Draft"}
                         </Badge>
                       </div>
 
@@ -338,42 +428,54 @@ const StudentAssessment = () => {
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Timer className="w-4 h-4" />
-                          {test.testDuration || test.Sections.reduce((total, s) => total + s.duration, 0)} minutes
+                          {test.testDuration ||
+                            test.Sections.reduce(
+                              (total, s) => total + s.duration,
+                              0
+                            )}{" "}
+                          minutes
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Calendar className="w-4 h-4" />
-                          {test.testDate ? new Date(test.testDate).toLocaleDateString() : 'Not scheduled'}
+                          {test.testDate
+                            ? new Date(test.testDate).toLocaleDateString()
+                            : "Not scheduled"}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Clock className="w-4 h-4" />
-                          {test.startTime || 'No time set'}
+                          {test.startTime || "No time set"}
                         </div>
-
                       </div>
 
                       <div className="flex gap-2 flex-wrap">
                         {test.Sections.map((section, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {section.type === "MCQ" ? "📝" : "💻"} {section.name}
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            {section.type === "MCQ" ? "📝" : "💻"}{" "}
+                            {section.name}
                           </Badge>
                         ))}
                       </div>
                     </div>
 
                     <div className="ml-6 flex flex-col items-end gap-2">
-                      {test.status === 'scheduled' ? (() => {
-                        const timing = getTestTiming(test);
-                        return (
-                          <>
-                            {timing.countdown && (
-                              <div className="text-sm font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                                {timing.countdown}
+                      {test.status === "scheduled" ? (
+                        (() => {
+                          const timing = getTestTiming(test);
+                          return (
+                            <>
+                              {timing.countdown && (
+                                <div className="text-sm font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                                  {timing.countdown}
+                                </div>
+                              )}
+                              <div className="text-xs text-gray-500 text-center">
+                                {timing.message}
                               </div>
-                            )}
-                            <div className="text-xs text-gray-500 text-center">
-                              {timing.message}
-                            </div>
-                            {timing.canStart && !timing.canBegin ? (
+                              {/* {timing.canStart && !timing.canBegin ? (
                               <Button
                                 onClick={() => handleStartTest(test)}
                                 className="bg-yellow-600 hover:bg-yellow-700"
@@ -399,16 +501,51 @@ const StudentAssessment = () => {
                                 Not Available
                               </Button>
                             )
-                            }
-                          </>
-                        );
-                      })() : (
+                            } */}
+
+                              {isSubmitted? (
+                                <Button
+                                  disabled
+                                  className="bg-gray-400 cursor-not-allowed"
+                                >
+                                  <Lock className="w-4 h-4 mr-2" />
+                                  Test Submitted
+                                </Button>
+                              ) : timing.canStart && !timing.canBegin ? (
+                                <Button
+                                  onClick={() => handleStartTest(test)}
+                                  className="bg-yellow-600 hover:bg-yellow-700"
+                                >
+                                  <Clock className="w-4 h-4 mr-2" />
+                                  Enter Test
+                                </Button>
+                              ) : timing.canBegin ? (
+                                <Button
+                                  onClick={() => handleStartTest(test)}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <Play className="w-4 h-4 mr-2" />
+                                  Begin Test
+                                </Button>
+                              ) : (
+                                <Button
+                                  disabled
+                                  className="bg-gray-400 cursor-not-allowed"
+                                >
+                                  <Lock className="w-4 h-4 mr-2" />
+                                  Not Available
+                                </Button>
+                              )}
+                            </>
+                          );
+                        })()
+                      ) : (
                         <Button
                           disabled
                           className="bg-gray-400 cursor-not-allowed"
                         >
                           <Lock className="w-4 h-4 mr-2" />
-                          {test.status === 'draft' ? 'Draft' : 'Not Scheduled'}
+                          {test.status === "draft" ? "Draft" : "Not Scheduled"}
                         </Button>
                       )}
                     </div>
@@ -480,53 +617,85 @@ const StudentAssessment = () => {
 
             <div className="space-y-6">
               <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-medium text-blue-900 mb-2">Test Information</h3>
+                <h3 className="font-medium text-blue-900 mb-2">
+                  Test Information
+                </h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-blue-700">Duration:</span>
                     <span className="ml-2 font-medium">
-                      {selectedTest ? (() => {
-                        const timing = getTestTiming(selectedTest);
-                        const originalDuration = selectedTest.Sections.reduce((sum, section) => sum + section.duration, 0);
-                        const availableDuration = timing.remainingTime > 0 ? Math.min(originalDuration, timing.remainingTime) : originalDuration;
-                        return `${availableDuration} minutes`;
-                      })() : '0 minutes'}
+                      {selectedTest
+                        ? (() => {
+                            const timing = getTestTiming(selectedTest);
+                            const originalDuration =
+                              selectedTest.Sections.reduce(
+                                (sum, section) => sum + section.duration,
+                                0
+                              );
+                            const availableDuration =
+                              timing.remainingTime > 0
+                                ? Math.min(
+                                    originalDuration,
+                                    timing.remainingTime
+                                  )
+                                : originalDuration;
+                            return `${availableDuration} minutes`;
+                          })()
+                        : "0 minutes"}
                     </span>
                   </div>
                   <div>
                     <span className="text-blue-700">Sections:</span>
-                    <span className="ml-2 font-medium">{selectedTest?.Sections.length}</span>
+                    <span className="ml-2 font-medium">
+                      {selectedTest?.Sections.length}
+                    </span>
                   </div>
                 </div>
-                {selectedTest && (() => {
-                  const timing = getTestTiming(selectedTest);
-                  return timing.countdown && !timing.canBegin ? (
-                    <div className="mt-3 p-3 bg-yellow-50 rounded border border-yellow-200">
-                      <div className="flex items-center justify-center gap-2">
-                        <Clock className="w-4 h-4 text-yellow-600" />
-                        <span className="text-yellow-800 font-medium">Test starts in: </span>
-                        <span className="text-xl font-mono text-yellow-900">{timing.countdown}</span>
+                {selectedTest &&
+                  (() => {
+                    const timing = getTestTiming(selectedTest);
+                    return timing.countdown && !timing.canBegin ? (
+                      <div className="mt-3 p-3 bg-yellow-50 rounded border border-yellow-200">
+                        <div className="flex items-center justify-center gap-2">
+                          <Clock className="w-4 h-4 text-yellow-600" />
+                          <span className="text-yellow-800 font-medium">
+                            Test starts in:{" "}
+                          </span>
+                          <span className="text-xl font-mono text-yellow-900">
+                            {timing.countdown}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ) : null;
-                })()}
+                    ) : null;
+                  })()}
               </div>
 
               <div>
-                <h3 className="font-medium text-gray-900 mb-2">General Instructions</h3>
+                <h3 className="font-medium text-gray-900 mb-2">
+                  General Instructions
+                </h3>
                 <div className="text-sm text-gray-700 space-y-2">
                   <p>{selectedTest?.instructions}</p>
                 </div>
               </div>
 
               <div>
-                <h3 className="font-medium text-gray-900 mb-2">Test Sections</h3>
+                <h3 className="font-medium text-gray-900 mb-2">
+                  Test Sections
+                </h3>
                 <div className="space-y-2">
                   {selectedTest?.Sections.map((section, index) => (
-                    <div key={section.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div
+                      key={section.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                    >
                       <div>
-                        <span className="font-medium">{index + 1}. {section.name}</span>
-                        <span className="text-sm text-gray-600 ml-2">({section.type})</span>
+                        <span className="font-medium">
+                          {index + 1}. {section.name}
+                        </span>
+                        <span className="text-sm text-gray-600 ml-2">
+                          ({section.type})
+                        </span>
                       </div>
                       <div className="text-sm text-gray-600">
                         {section.duration} minutes
@@ -545,7 +714,9 @@ const StudentAssessment = () => {
                   <li>• The test will run in fullscreen mode</li>
                   <li>• Do not refresh the page or navigate away</li>
                   <li>• Your progress is automatically saved</li>
-                  <li>• You can review and change answers within each section</li>
+                  <li>
+                    • You can review and change answers within each section
+                  </li>
                 </ul>
               </div>
 
@@ -557,26 +728,29 @@ const StudentAssessment = () => {
                 >
                   Cancel
                 </Button>
-                {selectedTest && (() => {
-                  const timing = getTestTiming(selectedTest);
-                  return timing.canBegin ? (
-                    <Button
-                      onClick={handleBeginTest}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Begin Test
-                    </Button>
-                  ) : (
-                    <Button
-                      disabled
-                      className="flex-1 bg-gray-400 cursor-not-allowed"
-                    >
-                      <Clock className="w-4 h-4 mr-2" />
-                      {timing.countdown ? `Wait ${timing.countdown}` : 'Not Available'}
-                    </Button>
-                  );
-                })()}
+                {selectedTest &&
+                  (() => {
+                    const timing = getTestTiming(selectedTest);
+                    return timing.canBegin ? (
+                      <Button
+                        onClick={handleBeginTest}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        Begin Test
+                      </Button>
+                    ) : (
+                      <Button
+                        disabled
+                        className="flex-1 bg-gray-400 cursor-not-allowed"
+                      >
+                        <Clock className="w-4 h-4 mr-2" />
+                        {timing.countdown
+                          ? `Wait ${timing.countdown}`
+                          : "Not Available"}
+                      </Button>
+                    );
+                  })()}
               </div>
             </div>
           </DialogContent>

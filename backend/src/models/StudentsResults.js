@@ -72,6 +72,13 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       unique: true,
       field: 'session_id'
+    },
+    resultsReleased: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: 'results_released',
+      comment: 'Whether admin has released results for viewing'
     }
   }, {
     tableName: 'students_results',

@@ -1,6 +1,7 @@
- const { TestSession, SectionSubmission, SectionScore, Test, Section, MCQ, CodingQuestion, CodeSubmission, User, LicensedUser, sequelize } = require('../models');
+ const { TestSession, SectionSubmission, SectionScore, Test, Section, MCQ, CodingQuestion, CodeSubmission, User, LicensedUser, StudentViolation, sequelize } = require('../models');
 const { generateReportOnCompletion } = require('../utils/autoReportGenerator');
 const { sanitizeForLog } = require('../utils/security');
+const { checkStudentBlocked } = require('./violationController');
 
 // Start a new test session
 exports.startTestSession = async (req, res) => {
@@ -17,6 +18,19 @@ exports.startTestSession = async (req, res) => {
     }
     
     console.log(`🚀 Starting test session - Student: ${sanitizeForLog(studentId)}, Test: ${sanitizeForLog(testId)}`);
+
+    // Check if student is blocked due to violations
+    const isBlocked = await checkStudentBlocked(studentId);
+    if (isBlocked) {
+      await transaction.rollback();
+      console.log(`🚫 BLOCKED STUDENT - Student: ${studentId}, Test: ${testId}`);
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: You are blocked due to test violations. Contact administrator.',
+        blocked: true,
+        violationBlock: true
+      });
+    }
 
     // Check if test exists and get sections
     const test = await Test.findOne({
@@ -45,6 +59,20 @@ exports.startTestSession = async (req, res) => {
       const timeDiff = (currentTime - testStartDateTime) / (1000 * 60); // minutes
       
       if (timeDiff > 15) {
+        // Log late entry violation
+        await StudentViolation.create({
+          studentId,
+          testId,
+          violationType: 'LateEntry',
+          description: `Student attempted to join test ${Math.floor(timeDiff)} minutes after start window expired`,
+          severity: 'Medium',
+          evidence: JSON.stringify({
+            testStartTime: testStartDateTime,
+            attemptTime: currentTime,
+            minutesLate: Math.floor(timeDiff)
+          })
+        });
+        
         await transaction.rollback();
         console.log(`🚫 Test start window expired - Student: ${studentId}, Test: ${testId}, Minutes passed: ${Math.floor(timeDiff)}`);
         return res.status(403).json({
@@ -84,6 +112,22 @@ exports.startTestSession = async (req, res) => {
 
     // CRITICAL: For licensed users, ANY existing session means they cannot take the test again
     if (isLicensedUser && session) {
+      // Log multiple attempt violation for licensed users
+      await StudentViolation.create({
+        studentId,
+        testId,
+        violationType: 'MultipleAttempt',
+        description: `Licensed user attempted to retake test. Previous session status: ${session.status}`,
+        severity: 'High',
+        evidence: JSON.stringify({
+          previousSessionId: session.id,
+          previousStatus: session.status,
+          previousStartTime: session.startedAt,
+          previousCompletedTime: session.completedAt,
+          isLicensedUser: true
+        })
+      });
+      
       await transaction.rollback();
       console.log(`🚫 LICENSED USER RESTRICTION - Student: ${studentId}, Test: ${testId}, Status: ${session.status}`);
       
@@ -252,6 +296,26 @@ exports.getCurrentSection = async (req, res) => {
 
     const currentSection = test.Sections[session.currentSectionIndex];
 
+    // Randomize questions if enabled
+    let sectionMCQs = currentSection.MCQs || [];
+    let sectionCodingQuestions = currentSection.codingQuestions || [];
+    
+    if (currentSection.randomizeQuestions && currentSection.displayQuestions) {
+      // Shuffle and select random MCQs
+      if (sectionMCQs.length > 0) {
+        const shuffled = [...sectionMCQs].sort(() => Math.random() - 0.5);
+        sectionMCQs = shuffled.slice(0, currentSection.displayQuestions);
+        console.log(`📝 Randomized ${sectionMCQs.length} MCQs from ${currentSection.MCQs.length} total`);
+      }
+      
+      // Shuffle and select random Coding Questions
+      if (sectionCodingQuestions.length > 0) {
+        const shuffled = [...sectionCodingQuestions].sort(() => Math.random() - 0.5);
+        sectionCodingQuestions = shuffled.slice(0, currentSection.displayQuestions);
+        console.log(`📝 Randomized ${sectionCodingQuestions.length} coding questions from ${currentSection.codingQuestions.length} total`);
+      }
+    }
+
     // Calculate section time remaining
     let sectionTimeRemaining = null;
     if (session.sectionEndTime) {
@@ -277,9 +341,12 @@ exports.getCurrentSection = async (req, res) => {
         duration: currentSection.duration,
         instructions: currentSection.instructions,
         type: currentSection.type,
-        MCQs: currentSection.MCQs,
-        codingQuestions: currentSection.codingQuestions || [],
-        isLocked: (session.completedSections || []).includes(session.currentSectionIndex)
+        MCQs: sectionMCQs,
+        codingQuestions: sectionCodingQuestions,
+        isLocked: (session.completedSections || []).includes(session.currentSectionIndex),
+        totalQuestions: currentSection.totalQuestions,
+        displayQuestions: currentSection.displayQuestions,
+        randomizeQuestions: currentSection.randomizeQuestions
       },
       test: {
         name: test.name,

@@ -1,7 +1,7 @@
 
 import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { Code, Home, User, BookOpen, Trophy, LogOut, ClipboardList, FileText } from "lucide-react";
+import { Code, Home, User, BookOpen, Trophy, LogOut, ClipboardList, FileText,Calendar } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -16,10 +16,12 @@ const StudentLayout = ({ children }: StudentLayoutProps) => {
 
   const menuItems = [
     { icon: FileText, label: "Dashboard", path: "/student/dashboard" },
+    { icon: Calendar, label: "Book Slot", path: "/student/slot-booking" },
     { icon: ClipboardList, label: "Assessment", path: "/student/assessment" },
     { icon: BookOpen, label: "Practice", path: "/student/practice" },
     { icon: FileText, label: "Reports", path: "/student/reports" },
     { icon: Trophy, label: "Leaderboard", path: "/student/leaderboard" }
+    
   ];
 
   const handleLogout = () => {

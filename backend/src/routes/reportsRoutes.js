@@ -40,6 +40,7 @@ router.post('/generate-test-report/:testId', async (req, res) => {
     };
     
     const resultsData = await testResultsController.getAllTestResults(mockReq, mockRes);
+    console.log('Test results data:', resultsData);
     
     if (resultsData && resultsData.success && resultsData.results && resultsData.results.length > 0) {
       res.json({

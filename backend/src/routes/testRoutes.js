@@ -46,7 +46,7 @@ const router = express.Router();
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../uploads"));
+    cb(null, path.join(__dirname, "../../uploads"));
   },
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
@@ -148,6 +148,7 @@ router.get('/template/download', (req, res) => {
 
 // Add these new routes to your existing file
 router.get('/', testController.getAllTests);
+router.get("/check-submission", testController.checkSubmissionStatus);
 router.get('/assigned', testController.getAssignedTests);
 router.get('/:id', testController.getTestById);
 router.get('/:testId/eligibility', testController.checkTestEligibility);

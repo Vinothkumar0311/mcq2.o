@@ -188,6 +188,7 @@ exports.getTestReport = async (req, res) => {
 
 // Download test report as PDF
 exports.downloadTestReport = async (req, res) => {
+  console.log('Download test report request received');
   try {
     const { studentName, email } = req.query;
 

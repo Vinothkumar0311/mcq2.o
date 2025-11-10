@@ -1,0 +1,58 @@
+{
+  "name": "Math Test with Random Questions",
+  "description": "Test with randomized question selection",
+  "sections": [
+    {
+      "name": "Algebra Section",
+      "duration": 30,
+      "type": "MCQ",
+      "correctMarks": 1,
+      "instructions": "Answer the algebra questions",
+      "totalQuestions": 10,
+      "displayQuestions": 5,
+      "randomizeQuestions": true,
+      "manualQuestions": [
+        {
+          "questionText": "What is 2+2?",
+          "optionA": "3",
+          "optionB": "4", 
+          "optionC": "5",
+          "optionD": "6",
+          "correctAnswer": "B"
+        },
+        {
+          "questionText": "What is 3+3?",
+          "optionA": "5",
+          "optionB": "6",
+          "optionC": "7", 
+          "optionD": "8",
+          "correctAnswer": "B"
+        },
+        {
+          "questionText": "What is 4+4?",
+          "optionA": "7",
+          "optionB": "8",
+          "optionC": "9",
+          "optionD": "10",
+          "correctAnswer": "B"
+        },
+        {
+          "questionText": "What is 5+5?",
+          "optionA": "9",
+          "optionB": "10",
+          "optionC": "11",
+          "optionD": "12", 
+          "correctAnswer": "B"
+        },
+        {
+          "questionText": "What is 6+6?",
+          "optionA": "11",
+          "optionB": "12",
+          "optionC": "13",
+          "optionD": "14",
+          "correctAnswer": "B"
+        }
+      ]
+    }
+  ]
+}

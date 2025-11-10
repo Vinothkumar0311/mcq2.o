@@ -6,9 +6,10 @@ module.exports = (sequelize, DataTypes) => {
     correctMarks: DataTypes.INTEGER,
     instructions: DataTypes.TEXT,
     testId: {
-      type: DataTypes.STRING, // 👈 Must match Test.testId type
+      type: DataTypes.STRING,
       allowNull: false,
     },
+
   });
 
   return Section;

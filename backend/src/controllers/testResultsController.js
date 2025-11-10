@@ -1,4 +1,4 @@
-const { TestSession, SectionSubmission, StudentsResults, Test, Section, MCQ, CodingQuestion, User, LicensedUser, sequelize } = require('../models');
+const { TestSession, SectionSubmission, StudentsResults, Test, Section, MCQ, CodingQuestion, CodeSubmission, User, LicensedUser, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 // Get test results for a specific test and student
@@ -27,6 +27,25 @@ exports.getTestResult = async (req, res) => {
       // Get test details
       const test = await Test.findByPk(testId);
       
+      // Check if results are released by admin
+      if (!testResult.resultsReleased) {
+        return res.json({
+          success: true,
+          resultsPending: true,
+          testCompleted: true,
+          testResult: {
+            testId: testResult.testId,
+            testName: test?.name || 'Unknown Test',
+            status: 'completed',
+            completedAt: testResult.completedAt,
+            message: '✅ Test Completed Successfully!',
+            subMessage: 'Your results will be available once released by the admin.',
+            showLogo: true,
+            resultsReleased: false
+          }
+        });
+      }
+      
       // Format section-based test results
       const formattedResult = {
         testId: testResult.testId,
@@ -39,11 +58,20 @@ exports.getTestResult = async (req, res) => {
         startedAt: testResult.startedAt,
         hasMCQQuestions: false,
         hasCodingQuestions: false,
+        resultsReleased: testResult.resultsReleased,
         mcqResults: {
           totalQuestions: 0,
           correctAnswers: 0,
+          wrongAnswers: 0,
           unansweredCount: 0,
-          questions: []
+          accuracyRate: 0,
+          questions: [],
+          performance: {
+            excellent: false,
+            good: false,
+            average: false,
+            needsImprovement: false
+          }
         },
         codingResults: []
       };
@@ -65,39 +93,204 @@ exports.getTestResult = async (req, res) => {
             
             formattedResult.mcqResults.questions.push({
               id: mcq.id,
-              questionText: mcq.questionText,
-              optionA: mcq.optionA,
-              optionB: mcq.optionB,
-              optionC: mcq.optionC,
-              optionD: mcq.optionD,
-              correctOption: mcq.correctOption,
-              correctOptionLetter: mcq.correctOptionLetter,
+              questionText: mcq.questionText || 'Question text not available',
+              questionImage: mcq.questionImage,
+              optionA: mcq.optionA || 'Option A',
+              optionAImage: mcq.optionAImage,
+              optionB: mcq.optionB || 'Option B',
+              optionBImage: mcq.optionBImage,
+              optionC: mcq.optionC || 'Option C',
+              optionCImage: mcq.optionCImage,
+              optionD: mcq.optionD || 'Option D',
+              optionDImage: mcq.optionDImage,
+              correctOption: mcq.correctOption || mcq.correctOptionLetter || 'A',
+              correctOptionLetter: mcq.correctOptionLetter || 'A',
               userAnswer: userAnswer || null,
               isCorrect,
-              explanation: mcq.explanation
+              isUnanswered: !userAnswer,
+              explanation: mcq.explanation || `The correct answer is ${mcq.correctOptionLetter || 'A'}.`
             });
           }
         }
         
-        // Process coding results
-        if (detailedCodingResults && detailedCodingResults.length > 0) {
+        // Process coding results from actual CodeSubmission records
+        if (submission.section?.codingQuestions && submission.section.codingQuestions.length > 0) {
           formattedResult.hasCodingQuestions = true;
-          detailedCodingResults.forEach((codingResult, index) => {
-            formattedResult.codingResults.push({
-              questionNumber: index + 1,
-              questionName: `Problem ${index + 1}`,
-              problemStatement: codingResult.problemStatement?.substring(0, 100) + '...' || 'Coding Problem',
-              testCasesPassed: codingResult.testCasesPassed || 0,
-              totalTestCases: codingResult.totalTestCases || 0,
-              score: codingResult.score || 0,
-              maxScore: codingResult.maxScore || 0,
-              language: codingResult.language || 'Unknown',
-              status: codingResult.testCasesPassed === codingResult.totalTestCases ? 'All Passed' : 'Partial',
-              percentage: codingResult.totalTestCases > 0 ? 
-                Math.round((codingResult.testCasesPassed / codingResult.totalTestCases) * 100) : 0
-            });
+          
+          // Get actual code submissions for this test and student
+          const codeSubmissions = await CodeSubmission.findAll({
+            where: { 
+              testId: testResult.testId, 
+              studentId: testResult.studentId,
+              isDryRun: false 
+            },
+            include: [{
+              model: CodingQuestion,
+              as: 'codingQuestion'
+            }],
+            order: [['codingQuestionId', 'ASC']]
           });
+          
+          // Process each code submission if found
+          if (codeSubmissions && codeSubmissions.length > 0) {
+            for (const codeSubmission of codeSubmissions) {
+            const testResults = codeSubmission.testResults || [];
+            const passedTests = testResults.filter(t => t.passed).length;
+            const totalTests = testResults.length;
+            const percentage = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+            
+            // Determine status
+            let status = 'Failed';
+            if (percentage === 100) {
+              status = 'All Passed';
+            } else if (percentage >= 50) {
+              status = 'Partially Passed';
+            } else if (percentage > 0) {
+              status = 'Some Passed';
+            }
+            
+            // Calculate grade
+            let grade = 'F';
+            if (percentage >= 90) grade = 'A+';
+            else if (percentage >= 85) grade = 'A';
+            else if (percentage >= 80) grade = 'A-';
+            else if (percentage >= 75) grade = 'B+';
+            else if (percentage >= 70) grade = 'B';
+            else if (percentage >= 65) grade = 'B-';
+            else if (percentage >= 60) grade = 'C+';
+            else if (percentage >= 55) grade = 'C';
+            else if (percentage >= 50) grade = 'C-';
+            else if (percentage >= 40) grade = 'D';
+            
+            formattedResult.codingResults.push({
+              submissionId: codeSubmission.id,
+              questionNumber: codeSubmission.codingQuestionId,
+              questionName: codeSubmission.codingQuestion?.title || `Problem ${codeSubmission.codingQuestionId}`,
+              problemStatement: codeSubmission.codingQuestion?.problemStatement || '',
+              testCasesPassed: passedTests,
+              totalTestCases: totalTests,
+              score: codeSubmission.score || 0,
+              maxScore: codeSubmission.codingQuestion?.marks || 0,
+              language: codeSubmission.language,
+              status,
+              grade,
+              percentage,
+              userCode: codeSubmission.code,
+              testResults: testResults.map((tr, index) => ({
+                testCaseNumber: index + 1,
+                input: tr.input,
+                expectedOutput: tr.expectedOutput,
+                actualOutput: tr.actualOutput,
+                passed: tr.passed,
+                error: tr.error,
+                executionTime: tr.executionTime || 0
+              })),
+              executionTime: codeSubmission.executionTime,
+              memoryUsed: codeSubmission.memoryUsed,
+              errorMessage: codeSubmission.errorMessage,
+              submittedAt: codeSubmission.createdAt,
+              compilationError: codeSubmission.errorMessage && codeSubmission.errorMessage.includes('compilation'),
+              runtimeError: codeSubmission.errorMessage && codeSubmission.errorMessage.includes('runtime')
+            });
+            }
+          } else {
+            // Fallback: Use detailedCodingResults from section submission if CodeSubmission records are missing
+            console.log('⚠️ No CodeSubmission records found, using fallback data from section submission');
+            if (detailedCodingResults && detailedCodingResults.length > 0) {
+              detailedCodingResults.forEach((codingResult, index) => {
+                const testResults = codingResult.testResults || [];
+                const passedTests = testResults.filter(t => t.passed).length;
+                const totalTests = testResults.length;
+                const percentage = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+                
+                let status = 'Failed';
+                if (percentage === 100) status = 'All Passed';
+                else if (percentage >= 50) status = 'Partially Passed';
+                else if (percentage > 0) status = 'Some Passed';
+                
+                let grade = 'F';
+                if (percentage >= 90) grade = 'A+';
+                else if (percentage >= 85) grade = 'A';
+                else if (percentage >= 80) grade = 'A-';
+                else if (percentage >= 75) grade = 'B+';
+                else if (percentage >= 70) grade = 'B';
+                else if (percentage >= 65) grade = 'B-';
+                else if (percentage >= 60) grade = 'C+';
+                else if (percentage >= 55) grade = 'C';
+                else if (percentage >= 50) grade = 'C-';
+                else if (percentage >= 40) grade = 'D';
+                
+                formattedResult.codingResults.push({
+                  submissionId: index + 1,
+                  questionNumber: index + 1,
+                  questionName: codingResult.questionName || `Problem ${index + 1}`,
+                  problemStatement: codingResult.problemStatement || 'Coding Problem',
+                  testCasesPassed: passedTests,
+                  totalTestCases: totalTests,
+                  score: codingResult.score || 0,
+                  maxScore: codingResult.maxScore || 0,
+                  language: codingResult.language || 'Unknown',
+                  status,
+                  grade,
+                  percentage,
+                  userCode: codingResult.code || codingResult.userCode || '// Code not available',
+                  testResults: testResults.map((tr, tcIndex) => ({
+                    testCaseNumber: tcIndex + 1,
+                    input: tr.input || 'No input',
+                    expectedOutput: tr.expectedOutput || 'No expected output',
+                    actualOutput: tr.actualOutput || 'No output',
+                    passed: tr.passed || false,
+                    error: tr.error || null,
+                    executionTime: tr.executionTime || 0
+                  })),
+                  executionTime: codingResult.executionTime || 0,
+                  memoryUsed: codingResult.memoryUsed || 0,
+                  errorMessage: codingResult.errorMessage || null,
+                  submittedAt: codingResult.submittedAt || new Date().toISOString(),
+                  compilationError: codingResult.errorMessage && codingResult.errorMessage.includes('compilation'),
+                  runtimeError: codingResult.errorMessage && codingResult.errorMessage.includes('runtime')
+                });
+              });
+            }
+          }
         }
+      }
+
+      // Calculate overall coding statistics if coding questions exist
+      if (formattedResult.hasCodingQuestions && formattedResult.codingResults.length > 0) {
+        const totalCodingTests = formattedResult.codingResults.reduce((sum, cr) => sum + cr.totalTestCases, 0);
+        const totalPassedTests = formattedResult.codingResults.reduce((sum, cr) => sum + cr.testCasesPassed, 0);
+        const totalCodingScore = formattedResult.codingResults.reduce((sum, cr) => sum + cr.score, 0);
+        const totalCodingMaxScore = formattedResult.codingResults.reduce((sum, cr) => sum + cr.maxScore, 0);
+        
+        formattedResult.codingStatistics = {
+          totalQuestions: formattedResult.codingResults.length,
+          totalTestCases: totalCodingTests,
+          totalPassedTestCases: totalPassedTests,
+          testCaseSuccessRate: totalCodingTests > 0 ? Math.round((totalPassedTests / totalCodingTests) * 100) : 0,
+          totalScore: totalCodingScore,
+          totalMaxScore: totalCodingMaxScore,
+          averageScore: formattedResult.codingResults.length > 0 ? Math.round(totalCodingScore / formattedResult.codingResults.length) : 0,
+          questionsFullyPassed: formattedResult.codingResults.filter(cr => cr.percentage === 100).length,
+          questionsPartiallyPassed: formattedResult.codingResults.filter(cr => cr.percentage > 0 && cr.percentage < 100).length,
+          questionsFailed: formattedResult.codingResults.filter(cr => cr.percentage === 0).length
+        };
+      }
+
+      // Calculate MCQ performance metrics
+      if (formattedResult.hasMCQQuestions && formattedResult.mcqResults.totalQuestions > 0) {
+        const totalQuestions = formattedResult.mcqResults.totalQuestions;
+        const correctAnswers = formattedResult.mcqResults.correctAnswers;
+        const wrongAnswers = totalQuestions - correctAnswers - formattedResult.mcqResults.unansweredCount;
+        
+        formattedResult.mcqResults.wrongAnswers = wrongAnswers;
+        formattedResult.mcqResults.accuracyRate = Math.round((correctAnswers / totalQuestions) * 100);
+        formattedResult.mcqResults.performance = {
+          excellent: correctAnswers >= totalQuestions * 0.9,
+          good: correctAnswers >= totalQuestions * 0.7,
+          average: correctAnswers >= totalQuestions * 0.5,
+          needsImprovement: correctAnswers < totalQuestions * 0.5
+        };
       }
 
       return res.json({
@@ -112,6 +305,25 @@ exports.getTestResult = async (req, res) => {
     });
 
     if (testResult) {
+      // Check if results are released by admin
+      if (!testResult.resultsReleased) {
+        return res.json({
+          success: true,
+          resultsPending: true,
+          testCompleted: true,
+          testResult: {
+            testId: testResult.testId,
+            testName: testResult.testName,
+            status: 'completed',
+            completedAt: testResult.completedAt,
+            message: '✅ Test Completed Successfully!',
+            subMessage: 'Your results will be available once released by the admin.',
+            showLogo: true,
+            resultsReleased: false
+          }
+        });
+      }
+      
       const answers = JSON.parse(testResult.answers || '{}');
       
       // Get test and questions for detailed results
@@ -136,8 +348,16 @@ exports.getTestResult = async (req, res) => {
         mcqResults: {
           totalQuestions: 0,
           correctAnswers: testResult.totalScore,
+          wrongAnswers: 0,
           unansweredCount: 0,
-          questions: []
+          accuracyRate: 0,
+          questions: [],
+          performance: {
+            excellent: false,
+            good: false,
+            average: false,
+            needsImprovement: false
+          }
         },
         codingResults: []
       };
@@ -153,19 +373,41 @@ exports.getTestResult = async (req, res) => {
             
             formattedResult.mcqResults.questions.push({
               id: mcq.id,
-              questionText: mcq.questionText,
-              optionA: mcq.optionA,
-              optionB: mcq.optionB,
-              optionC: mcq.optionC,
-              optionD: mcq.optionD,
-              correctOption: mcq.correctOption,
-              correctOptionLetter: mcq.correctOptionLetter,
+              questionText: mcq.questionText || 'Question text not available',
+              questionImage: mcq.questionImage,
+              optionA: mcq.optionA || 'Option A',
+              optionAImage: mcq.optionAImage,
+              optionB: mcq.optionB || 'Option B',
+              optionBImage: mcq.optionBImage,
+              optionC: mcq.optionC || 'Option C',
+              optionCImage: mcq.optionCImage,
+              optionD: mcq.optionD || 'Option D',
+              optionDImage: mcq.optionDImage,
+              correctOption: mcq.correctOption || mcq.correctOptionLetter || 'A',
+              correctOptionLetter: mcq.correctOptionLetter || 'A',
               userAnswer: userAnswer || null,
               isCorrect,
-              explanation: mcq.explanation
+              isUnanswered: !userAnswer,
+              explanation: mcq.explanation || `The correct answer is ${mcq.correctOptionLetter || 'A'}.`
             });
           }
         }
+      }
+
+      // Calculate MCQ performance metrics for simple tests
+      if (formattedResult.mcqResults.totalQuestions > 0) {
+        const totalQuestions = formattedResult.mcqResults.totalQuestions;
+        const correctAnswers = formattedResult.mcqResults.correctAnswers;
+        const wrongAnswers = totalQuestions - correctAnswers - formattedResult.mcqResults.unansweredCount;
+        
+        formattedResult.mcqResults.wrongAnswers = wrongAnswers;
+        formattedResult.mcqResults.accuracyRate = Math.round((correctAnswers / totalQuestions) * 100);
+        formattedResult.mcqResults.performance = {
+          excellent: correctAnswers >= totalQuestions * 0.9,
+          good: correctAnswers >= totalQuestions * 0.7,
+          average: correctAnswers >= totalQuestions * 0.5,
+          needsImprovement: correctAnswers < totalQuestions * 0.5
+        };
       }
 
       return res.json({

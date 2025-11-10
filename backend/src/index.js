@@ -53,6 +53,11 @@ const testSessionRoutes = require('./routes/testSessionRoutes');
 const sectionTimerRoutes = require('./routes/sectionTimerRoutes');
 const autoSaveRoutes = require('./routes/autoSaveRoutes');
 const leaderboardRoutes = require('./routes/leaderboardRoutes');
+const adminResultReleaseRoutes = require('./routes/adminResultReleaseRoutes');
+const testProgressRoutes = require('./routes/testProgressRoutes');
+const comprehensiveReportRoutes = require('./routes/comprehensiveReportRoutes');
+const violationRoutes = require('./routes/violationRoutes');
+const testEligibilityRoutes = require('./routes/testEligibilityRoutes');
 // Core API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/test', testRoutes);
@@ -90,8 +95,16 @@ app.use('/api/test-session', testSessionRoutes);
 app.use('/api/section-timer', sectionTimerRoutes);
 app.use('/api/auto-save', autoSaveRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/admin/results', adminResultReleaseRoutes);
+app.use('/api/test-progress', testProgressRoutes);
+app.use('/api/comprehensive-report', comprehensiveReportRoutes);
+app.use('/api/violations', violationRoutes);
+app.use('/api/test-eligibility', testEligibilityRoutes);
+app.use('/api/test-completion', require('./routes/testCompletionRoutes'));
 app.use('/api/test-result', testResultRoutes);
 app.use('/api/test-results', testResultsRoutes);
+app.use('/api/pdf-report', require('./routes/pdfReportRoutes'));
+app.use('/api/excel-report', require('./routes/excelReportRoutes'));
 app.use('/api/load-test', require('./routes/loadTestRoutes'));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

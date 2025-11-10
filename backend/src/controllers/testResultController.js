@@ -25,21 +25,53 @@ exports.getTestResults = async (req, res) => {
       });
     }
 
-    // Get test details with sections
-    const test = await Test.findByPk(testId, {
-      include: [{
-        model: Section,
-        as: 'sections',
-        include: [
-          { model: MCQ, as: 'questions' },
-          { model: CodingQuestion, as: 'codingQuestions' }
-        ]
-      }]
-    });
+    // CRITICAL: Check if results are released by admin
+    if (!testSession.resultsReleased) {
+      console.log(`🔒 Results not released yet for Student: ${studentId}, Test: ${testId}`);
+      return res.json({
+        success: true,
+        view: 'completion-screen',
+        message: '🎉 Test Completed Successfully!',
+        subtext: 'Your result will be available once released by the admin.',
+        testCompleted: true,
+        resultsReleased: false
+      });
+    }
+
+    console.log('✅ Results released - showing full details');
+    console.log(`Student: ${studentId}, Test: ${testId}`);
+    console.log(`Session ID: ${testSession.id}, Released: ${testSession.resultsReleased}`);
+
+    // Get test details with sections (handle missing associations gracefully)
+    let test;
+    try {
+      test = await Test.findByPk(testId, {
+        include: [{
+          model: Section,
+          as: 'sections',
+          required: false,
+          include: [
+            { model: MCQ, as: 'MCQs', required: false },
+            { model: CodingQuestion, as: 'codingQuestions', required: false }
+          ]
+        }]
+      });
+    } catch (error) {
+      // Fallback: get test without associations if they don't exist
+      console.log('Association error, using simple test lookup:', error.message);
+      test = await Test.findByPk(testId);
+    }
+    
+    if (!test) {
+      return res.status(404).json({
+        success: false,
+        error: 'Test not found'
+      });
+    }
 
     const results = {
       testId,
-      testName: test.name,
+      testName: test?.name || testSession.test?.name || 'Unknown Test',
       totalScore: testSession.totalScore || 0,
       maxScore: testSession.maxScore || 0,
       percentage: 0,
@@ -159,12 +191,12 @@ exports.getTestResults = async (req, res) => {
         as: 'section',
         include: [{
           model: MCQ,
-          as: 'questions'
+          as: 'MCQs'
         }]
       }]
     });
 
-    const mcqSections = sectionScores.filter(ss => ss.section?.questions?.length > 0);
+    const mcqSections = sectionScores.filter(ss => ss.section?.MCQs?.length > 0);
     if (mcqSections.length > 0) {
       results.hasMCQQuestions = true;
       
@@ -174,7 +206,7 @@ exports.getTestResults = async (req, res) => {
       const allQuestions = [];
 
       mcqSections.forEach(sectionScore => {
-        const questions = sectionScore.section.questions || [];
+        const questions = sectionScore.section.MCQs || [];
         const answers = sectionScore.answers || {};
         const unanswered = sectionScore.unansweredQuestions || [];
 

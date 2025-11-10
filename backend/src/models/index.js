@@ -300,6 +300,7 @@ const sectionSubmissionModel = require("./SectionSubmission");
 const sectionScoreModel = require("./SectionScore");
 const studentTestResultModel = require("./StudentTestResult");
 const studentsResultsModel = require("./StudentsResults");
+const studentViolationModel = require("./StudentViolation");
 
 // Initialize Sequelize models
 const db = {
@@ -329,7 +330,8 @@ const db = {
   SectionSubmission: sectionSubmissionModel(sequelize, DataTypes),
   SectionScore: sectionScoreModel(sequelize, DataTypes),
   StudentTestResult: studentTestResultModel(sequelize, DataTypes),
-  StudentsResults: studentsResultsModel(sequelize, DataTypes)
+  StudentsResults: studentsResultsModel(sequelize, DataTypes),
+  StudentViolation: studentViolationModel(sequelize, DataTypes)
 };
 
 // Test -> Section -> MCQ
@@ -547,6 +549,30 @@ db.Section.hasMany(db.SectionSubmission, {
 db.SectionSubmission.belongsTo(db.Section, {
   foreignKey: "sectionId",
   as: "section"
+});
+
+// StudentViolation associations (Test association removed due to schema mismatch)
+
+db.StudentViolation.belongsTo(db.User, {
+  foreignKey: "studentId",
+  as: "student",
+  constraints: false
+});
+db.User.hasMany(db.StudentViolation, {
+  foreignKey: "studentId",
+  as: "violations",
+  constraints: false
+});
+
+db.StudentViolation.belongsTo(db.LicensedUser, {
+  foreignKey: "studentId",
+  as: "licensedStudent",
+  constraints: false
+});
+db.LicensedUser.hasMany(db.StudentViolation, {
+  foreignKey: "studentId",
+  as: "violations",
+  constraints: false
 });
 
 module.exports = db;

@@ -18,6 +18,7 @@ import AdminChallenges from "./pages/AdminChallenges";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import StudentTests from "./pages/StudentTests";
 import StudentChallenges from "./pages/StudentChallenges";
+import StudentSlotBooking from "./pages/StudentSlotBooking";
 import StudentAssessment from "./pages/StudentAssessment";
 import CreateTest from "./pages/CreateTest";
 import AdminPasscode from "./pages/AdminPasscode";
@@ -40,10 +41,16 @@ import StudentLeaderboard from "./pages/StudentLeaderboard";
 import AdminLeaderboard from "./pages/AdminLeaderboard";
 import CompilerTest from "./pages/CompilerTest";
 import SectionTest from "./pages/SectionTest";
+import TestComplete from "./pages/TestComplete";
 import AdminTestReports from "./pages/AdminTestReports";
 import AdminTestStudents from "./pages/AdminTestStudents";
+import AdminViolations from "./pages/AdminViolations";
 import { AuthProvider } from "./contexts/AuthContext";
 import { autoCleanupOnStart } from "./utils/testResultCleanup";
+import SlotBooking from "./pages/admin/SlotBooking";
+import CourseCreate from "./pages/admin/CourseCreate";
+import CourseList from "./pages/admin/CourseList";
+import ModuleManager from "./pages/admin/ModuleManager";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
@@ -80,6 +87,7 @@ const App = () => {
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/student/test/:testId" element={<MCQTest />} />
                 <Route path="/student/section-test/:testId" element={<SectionTest />} />
+                <Route path="/student/test-complete" element={<TestComplete />} />
                 <Route path="/student/test/:testId/result" element={<TestResult />} />
                 <Route path="/student/practice/:topicId/result" element={<PracticeResult />} />
                 <Route
@@ -99,20 +107,27 @@ const App = () => {
                 <Route path="/student/practice" element={<StudentPractice />} />
                 <Route path="/student/reports" element={<StudentReports />} />
                 <Route path="/student/leaderboard" element={<StudentLeaderboard />} />
+                <Route path='/student/slot-booking' element={<StudentSlotBooking/>}/>
                 <Route path="/admin/mcq" element={<MCQManagement />} />
                 <Route path="/admin/students" element={<StudentManagement />} />
                 <Route path="/admin/challenges" element={<AdminChallenges />} />
                 <Route path="/admin/analytics" element={<AdminAnalytics />} />
                 <Route path="/admin/create-test" element={<CreateTest />} />
+                // Slot booking route
+                <Route path="/admin/slot-booking" element={<SlotBooking />} />
                 <Route path="/admin/passcode" element={<AdminPasscode />} />
                 <Route path="/admin/license" element={<AdminLicense />} />
                 <Route path="/admin/practice" element={<AdminPractice />} />
                 <Route path="/admin/upload-questions/:topicId" element={<UploadQuestions />} />
+                <Route path="/admin/courses" element={<CourseList />} />
+                <Route path="/admin/courses/create" element={<CourseCreate />} />
+                <Route path="/admin/courses/:courseId/modules" element={<ModuleManager />} />
                 <Route path="/admin/assessment-center" element={<AdminAssessmentCenter />} />
                 <Route path="/admin/reports" element={<AdminReports />} />
                 <Route path="/admin/test-reports" element={<AdminTestReports />} />
                 <Route path="/admin/test-reports/:testId" element={<TestReportPage />} />
                 <Route path="/admin/test-reports/:testId/students" element={<AdminTestStudents />} />
+                <Route path="/admin/violations" element={<AdminViolations />} />
                 <Route path="/admin/leaderboard" element={<AdminLeaderboard />} />
                 <Route path="/ai-quiz-generator" element={<AIQuizGenerator />} />
                 <Route path="/question-template" element={<QuestionTemplate />} />

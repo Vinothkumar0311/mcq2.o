@@ -72,7 +72,7 @@ const generatePDFReport = async (reportData) => {
           }
         }
       };
-      addStatistics(doc, stats);
+      // addStatistics(doc, stats);
       
       console.log('📝 Adding student results...');
       addStudentResults(doc, reportData.students, reportData.sections || [{ id: 1, name: 'Overall Test' }]);
@@ -276,13 +276,72 @@ function addStatistics(doc, stats) {
   }
 }
 
+// /**
+//  * Add student results to the PDF
+//  * @param {PDFDocument} doc - PDF document instance
+//  * @param {Array} students - Array of student data
+//  * @param {Array} sections - Array of section data
+//  */
+// function addStudentResults(doc, students, sections) {
+//   try {
+//     // Add a new page for student results
+//     doc.addPage();
+    
+//     doc
+//       .fontSize(14)
+//       .font('Helvetica-Bold')
+//       .text('Student Results', 50, 50);
+      
+//     doc.moveDown(0.5);
+    
+//     // Ensure we have valid data
+//     const validStudents = students || [];
+//     const validSections = sections || [{ id: 1, name: 'Overall Test' }];
+    
+//     if (validStudents.length === 0) {
+//       doc
+//         .fontSize(12)
+//         .font('Helvetica')
+//         .text('No student results available.', 50, doc.y);
+//       return;
+//     }
+    
+//     // Process students in chunks to handle pagination
+//     const studentsPerPage = 20;
+//     let currentPage = 0;
+    
+//     for (let i = 0; i < validStudents.length; i += studentsPerPage) {
+//       if (i > 0) {
+//         // Add a new page for each chunk of students
+//         doc.addPage();
+//         doc.y = 50;
+//       }
+      
+//       const chunk = validStudents.slice(i, i + studentsPerPage);
+      
+//       // Draw student results table
+//       drawStudentResultsTable(doc, chunk, validSections, i + 1);
+      
+//       // Add page number
+//       currentPage++;
+//       doc
+//         .fontSize(8)
+//         .text(`Page ${currentPage}`, 50, 750, { align: 'left' });
+//     }
+//   } catch (error) {
+//     console.error('❌ Error in addStudentResults:', error);
+//     throw error;
+//   }
+// }
+
 /**
  * Add student results to the PDF
  * @param {PDFDocument} doc - PDF document instance
  * @param {Array} students - Array of student data
- * @param {Array} sections - Array of section data
+ * @param {Array} sections - Array of section data (no longer used by drawStudentResultsTable)
  */
 function addStudentResults(doc, students, sections) {
+  console.log('📝 addStudentResults called with', students)
   try {
     // Add a new page for student results
     doc.addPage();
@@ -296,7 +355,6 @@ function addStudentResults(doc, students, sections) {
     
     // Ensure we have valid data
     const validStudents = students || [];
-    const validSections = sections || [{ id: 1, name: 'Overall Test' }];
     
     if (validStudents.length === 0) {
       doc
@@ -307,7 +365,7 @@ function addStudentResults(doc, students, sections) {
     }
     
     // Process students in chunks to handle pagination
-    const studentsPerPage = 10;
+    const studentsPerPage = 20;
     let currentPage = 0;
     
     for (let i = 0; i < validStudents.length; i += studentsPerPage) {
@@ -318,15 +376,21 @@ function addStudentResults(doc, students, sections) {
       }
       
       const chunk = validStudents.slice(i, i + studentsPerPage);
+
+      console.log(`📝 Drawing student results table for students ${i + 1} to ${i + chunk.length}...`);
+      console.log('Chunk sample data:', chunk.slice(0, 2)); // Log first 2 students in the chunk
       
       // Draw student results table
-      drawStudentResultsTable(doc, chunk, validSections, i + 1);
+      // --- MODIFIED ---
+      // Removed 'validSections' from the call, as the new table function doesn't need it.
+      drawStudentResultsTable(doc, chunk, i + 1);
+      // --- END MODIFICATION ---
       
       // Add page number
       currentPage++;
       doc
         .fontSize(8)
-        .text(`Page ${currentPage}`, 50, 750, { align: 'left' });
+        .text(`Page ${currentPage + 1}`, 50, 750, { align: 'left' }); // (Adjusted page logic slightly)
     }
   } catch (error) {
     console.error('❌ Error in addStudentResults:', error);
@@ -334,48 +398,157 @@ function addStudentResults(doc, students, sections) {
   }
 }
 
+// /**
+//  * Draw student results table
+//  * @param {PDFDocument} doc - PDF document instance
+//  * @param {Array} students - Array of student data for current page
+//  * @param {Array} sections - Array of section data
+//  * @param {number} startIndex - Starting index for student numbering
+//  */
+// function drawStudentResultsTable(doc, students, sections, startIndex) {
+//   try {
+//     // Table header
+//     const headerY = doc.y;
+//     const colWidths = [40, 150, 80]; // Student number, name, total score
+//     const sectionWidth = 50; // Width for each section column
+    
+//     // Draw table header background
+//     doc
+//       .rect(50, headerY, 520, 20)
+//       .fillAndStroke('#f0f0f0', '#000000');
+      
+//     // Draw header cells
+//     doc
+//       .fontSize(9)
+//       .font('Helvetica-Bold')
+//       .fillColor('#000000')
+//       .text('#', 55, headerY + 5, { width: colWidths[0] - 10, align: 'left' })
+//       .text('Student Name', 55 + colWidths[0], headerY + 5, { width: colWidths[1] - 10, align: 'left' });
+      
+//     // Draw section headers
+//     const validSections = sections || [];
+//     validSections.forEach((section, index) => {
+//       const x = 55 + colWidths[0] + colWidths[1] + (index * sectionWidth);
+//       const sectionName = section?.name || `Section ${index + 1}`;
+//       doc.text(sectionName.substring(0, 4), x, headerY + 5, { 
+//         width: sectionWidth - 5, 
+//         align: 'center' 
+//       });
+//     });
+    
+//     // Draw total header
+//     doc.text('Total', 55 + colWidths[0] + colWidths[1] + (validSections.length * sectionWidth), headerY + 5, {
+//       width: colWidths[2] - 5,
+//       align: 'center'
+//     });
+    
+//     // Draw student rows
+//     let currentY = headerY + 20;
+    
+//     const validStudents = students || [];
+//     validStudents.forEach((student, index) => {
+//       // Alternate row background
+//       if (index % 2 === 0) {
+//         doc
+//           .rect(50, currentY, 520, 20)
+//           .fillAndStroke('#f9f9f9', '#e0e0e0');
+//       }
+      
+//       // Student number
+//       doc
+//         .fontSize(9)
+//         .font('Helvetica')
+//         .fillColor('#000000')
+//         .text(
+//           (startIndex + index).toString(), 
+//           55, 
+//           currentY + 5, 
+//           { width: colWidths[0] - 10, align: 'left' }
+//         );
+        
+//       // Student name (truncate if too long)
+//       const studentName = (student?.name || 'Unknown Student');
+//       const truncatedName = studentName.length > 20 
+//         ? studentName.substring(0, 17) + '...' 
+//         : studentName;
+        
+//       doc.text(
+//         truncatedName,
+//         55 + colWidths[0],
+//         currentY + 5,
+//         { width: colWidths[1] - 10, align: 'left' }
+//       );
+      
+//       // Section scores
+//       validSections.forEach((section, secIndex) => {
+//         const x = 55 + colWidths[0] + colWidths[1] + (secIndex * sectionWidth);
+//         const sectionScores = student?.sectionScores || {};
+//         const score = sectionScores[section?.id] || { marksObtained: 0 };
+        
+//         doc.text(
+//           (score?.marksObtained || 0).toString(),
+//           x,
+//           currentY + 5,
+//           { width: sectionWidth - 5, align: 'center' }
+//         );
+//       });
+      
+//       // Total score
+//       doc.text(
+//         (student?.totalScore || 0).toString(),
+//         55 + colWidths[0] + colWidths[1] + (validSections.length * sectionWidth),
+//         currentY + 5,
+//         { width: colWidths[2] - 5, align: 'center' }
+//       );
+      
+//       currentY += 20;
+//     });
+    
+//     doc.y = currentY + 10;
+//   } catch (error) {
+//     console.error('❌ Error in drawStudentResultsTable:', error);
+//     throw error;
+//   }
+// }
+
 /**
  * Draw student results table
  * @param {PDFDocument} doc - PDF document instance
  * @param {Array} students - Array of student data for current page
- * @param {Array} sections - Array of section data
  * @param {number} startIndex - Starting index for student numbering
  */
-function drawStudentResultsTable(doc, students, sections, startIndex) {
+function drawStudentResultsTable(doc, students, startIndex) {
   try {
     // Table header
     const headerY = doc.y;
-    const colWidths = [40, 150, 80]; // Student number, name, total score
-    const sectionWidth = 50; // Width for each section column
+
+    // --- NEW COLUMN DEFINITIONS ---
+    // S.No, Name, Sinno, Email, Marks
+    const colWidths = [40, 130, 80, 170, 100];
+    const headers = ['S.No', 'Name', 'Sinno', 'Email', 'Marks'];
+    const totalTableWidth = colWidths.reduce((a, b) => a + b, 0); // 520
+    const startX = 50;
+    const padding = 5;
+    // --- END NEW COLUMN DEFINITIONS ---
     
     // Draw table header background
     doc
-      .rect(50, headerY, 520, 20)
+      .rect(startX, headerY, totalTableWidth, 20)
       .fillAndStroke('#f0f0f0', '#000000');
       
     // Draw header cells
     doc
       .fontSize(9)
       .font('Helvetica-Bold')
-      .fillColor('#000000')
-      .text('#', 55, headerY + 5, { width: colWidths[0] - 10, align: 'left' })
-      .text('Student Name', 55 + colWidths[0], headerY + 5, { width: colWidths[1] - 10, align: 'left' });
-      
-    // Draw section headers
-    const validSections = sections || [];
-    validSections.forEach((section, index) => {
-      const x = 55 + colWidths[0] + colWidths[1] + (index * sectionWidth);
-      const sectionName = section?.name || `Section ${index + 1}`;
-      doc.text(sectionName.substring(0, 4), x, headerY + 5, { 
-        width: sectionWidth - 5, 
-        align: 'center' 
+      .fillColor('#000000');
+
+    let currentX = startX + padding;
+    headers.forEach((header, index) => {
+      doc.text(header, currentX, headerY + 5, {
+        width: colWidths[index] - (padding * 2),
+        align: header === 'Marks' ? 'center' : 'left'
       });
-    });
-    
-    // Draw total header
-    doc.text('Total', 55 + colWidths[0] + colWidths[1] + (validSections.length * sectionWidth), headerY + 5, {
-      width: colWidths[2] - 5,
-      align: 'center'
+      currentX += colWidths[index];
     });
     
     // Draw student rows
@@ -386,56 +559,73 @@ function drawStudentResultsTable(doc, students, sections, startIndex) {
       // Alternate row background
       if (index % 2 === 0) {
         doc
-          .rect(50, currentY, 520, 20)
+          .rect(startX, currentY, totalTableWidth, 20)
           .fillAndStroke('#f9f9f9', '#e0e0e0');
       }
       
-      // Student number
       doc
         .fontSize(9)
         .font('Helvetica')
-        .fillColor('#000000')
-        .text(
-          (startIndex + index).toString(), 
-          55, 
-          currentY + 5, 
-          { width: colWidths[0] - 10, align: 'left' }
-        );
+        .fillColor('#000000');
+
+      currentX = startX + padding; // Reset X for each row
+      
+      // --- NEW ROW DATA ---
+
+      // Column 1: S.No
+      doc.text(
+        (startIndex + index).toString(), 
+        currentX, 
+        currentY + 5, 
+        { width: colWidths[0] - (padding * 2), align: 'left' }
+      );
+      currentX += colWidths[0];
         
-      // Student name (truncate if too long)
+      // Column 2: Name
       const studentName = (student?.name || 'Unknown Student');
       const truncatedName = studentName.length > 20 
         ? studentName.substring(0, 17) + '...' 
         : studentName;
-        
       doc.text(
         truncatedName,
-        55 + colWidths[0],
+        currentX,
         currentY + 5,
-        { width: colWidths[1] - 10, align: 'left' }
+        { width: colWidths[1] - (padding * 2), align: 'left' }
       );
+      currentX += colWidths[1];
+
+      // Column 3: Sinno
+      const sinno = student?.id || 'N/A'; // Assumes 'sinno' property exists
+      doc.text(
+        sinno,
+        currentX,
+        currentY + 5,
+        { width: colWidths[2] - (padding * 2), align: 'left' }
+      );
+      currentX += colWidths[2];
+
+      // Column 4: Email
+      const email = student?.email || 'N/A'; // Assumes 'email' property exists
+      const truncatedEmail = email.length > 25 
+        ? email.substring(0, 22) + '...' 
+        : email;
+      doc.text(
+        truncatedEmail,
+        currentX,
+        currentY + 5,
+        { width: colWidths[3] - (padding * 2), align: 'left' }
+      );
+      currentX += colWidths[3];
       
-      // Section scores
-      validSections.forEach((section, secIndex) => {
-        const x = 55 + colWidths[0] + colWidths[1] + (secIndex * sectionWidth);
-        const sectionScores = student?.sectionScores || {};
-        const score = sectionScores[section?.id] || { marksObtained: 0 };
-        
-        doc.text(
-          (score?.marksObtained || 0).toString(),
-          x,
-          currentY + 5,
-          { width: sectionWidth - 5, align: 'center' }
-        );
-      });
-      
-      // Total score
+      // Column 5: Marks
+      // (Using 'totalScore' from your original data structure for 'Marks')
       doc.text(
         (student?.totalScore || 0).toString(),
-        55 + colWidths[0] + colWidths[1] + (validSections.length * sectionWidth),
+        currentX,
         currentY + 5,
-        { width: colWidths[2] - 5, align: 'center' }
+        { width: colWidths[4] - (padding * 2), align: 'center' }
       );
+      // --- END NEW ROW DATA ---
       
       currentY += 20;
     });

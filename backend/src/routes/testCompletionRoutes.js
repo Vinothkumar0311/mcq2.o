@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const testCompletionController = require('../controllers/testCompletionController');
+const { handleTestCompletion } = require('../controllers/testCompletionRedirectController');
 
-// Complete test with auto report generation
-router.post('/complete', testCompletionController.completeTest);
+// FIXED: Route to check test completion status
+router.get('/:testId/student/:studentId', handleTestCompletion);
 
 module.exports = router;

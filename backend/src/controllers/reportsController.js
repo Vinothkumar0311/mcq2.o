@@ -122,6 +122,8 @@ exports.getTestResults = (req, res) => {
 };
 
 exports.downloadTestReport = (req, res) => {
+  console.log('Downloading test report for testId:', req.params.testId);
+  
   res.json({ success: true, message: 'Test report' });
 };
 

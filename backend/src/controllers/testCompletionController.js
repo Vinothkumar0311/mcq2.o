@@ -327,23 +327,32 @@ async function saveStudentTestResult(session, totalScore, completedAt, transacti
       transaction
     });
 
-    // Get student details
+    // FIXED: Get real student details dynamically
     let student = await LicensedUser.findByPk(session.studentId, {
-      attributes: ['name', 'email', 'department', 'sinNumber'],
+      attributes: ['name', 'email', 'department', 'sin_number'],
       transaction
     });
 
     if (!student) {
       student = await User.findByPk(session.studentId, {
-        attributes: ['name', 'email'],
+        attributes: ['name', 'email', 'department'],
         transaction
       });
     }
 
     if (!student || !test) {
-      console.warn(`Missing student or test data for session ${session.id}`);
+      console.error(`CRITICAL: Missing student or test data for session ${session.id}`);
+      console.error(`Student ID: ${session.studentId}, Test ID: ${session.testId}`);
       return;
     }
+
+    console.log(`✅ Found student: ${student.name} (${student.email})`);
+    
+    // FIXED: Ensure we have real student data, not placeholders
+    const studentName = student.name || 'Unknown Student';
+    const studentEmail = student.email || 'unknown@email.com';
+    const sinNumber = student.sin_number || student.sinNumber || 'N/A';
+    const department = student.department || 'N/A';
 
     const maxScore = session.maxScore || 100;
     const percentage = maxScore > 0 ? ((totalScore / maxScore) * 100) : 0;
@@ -357,17 +366,19 @@ async function saveStudentTestResult(session, totalScore, completedAt, transacti
       transaction
     });
 
+    // FIXED: Use real student data, not placeholders
     const resultData = {
       testId: session.testId,
       testName: test.name,
-      userEmail: student.email,
-      studentName: student.name,
-      sinNumber: student.sinNumber || 'N/A',
-      department: student.department || 'N/A',
+      userEmail: studentEmail,
+      studentName: studentName,
+      sinNumber: sinNumber,
+      department: department,
       totalScore,
       maxScore,
       percentage: Math.round(percentage * 100) / 100,
-      completedAt
+      completedAt,
+      resultsReleased: false // FIXED: Default to false - admin must release
     };
 
     if (existingResult) {
@@ -400,41 +411,48 @@ async function saveDetailedStudentResults(session, totalScore, completedAt, tran
       transaction
     });
 
-    // Get student details
+    // FIXED: Get real student details for detailed results
     let student = await LicensedUser.findByPk(session.studentId, {
-      attributes: ['name', 'email', 'department', 'sinNumber'],
+      attributes: ['name', 'email', 'department', 'sin_number'],
       transaction
     });
 
     if (!student) {
       student = await User.findByPk(session.studentId, {
-        attributes: ['name', 'email'],
+        attributes: ['name', 'email', 'department'],
         transaction
       });
     }
 
     if (!student || !test) {
-      console.warn(`Missing student or test data for detailed results ${session.id}`);
+      console.error(`CRITICAL: Missing student or test data for detailed results ${session.id}`);
       return;
     }
+
+    // FIXED: Use real student data
+    const studentName = student.name || 'Unknown Student';
+    const studentEmail = student.email || 'unknown@email.com';
+    const sinNumber = student.sin_number || student.sinNumber || 'N/A';
+    const department = student.department || 'N/A';
 
     const maxScore = session.maxScore || 100;
     const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
-    // Store in StudentTestResult with session reference for downloads
+    // FIXED: Store real student data in detailed results
     const resultData = {
       testId: session.testId,
       testName: test.name,
-      userEmail: student.email,
-      studentName: student.name,
-      sinNumber: student.sinNumber || 'N/A',
-      department: student.department || 'N/A',
+      userEmail: studentEmail,
+      studentName: studentName,
+      sinNumber: sinNumber,
+      department: department,
       totalScore,
       maxScore,
       percentage,
       completedAt,
-      sessionId: session.id, // Add session ID for report downloads
-      downloadUrl: `/api/student/download-report/${session.id}`
+      sessionId: session.id,
+      downloadUrl: `/api/student/download-report/${session.id}`,
+      resultsReleased: false // FIXED: Default to false - admin must release
     };
 
     // Check if detailed result already exists

@@ -302,8 +302,8 @@ const SectionTest = () => {
           });
           
           setTimeout(() => {
-            navigate(`/student/test-result/${testId}`);
-          }, 2000);
+            navigate('/student/test-complete');
+          }, 1000);
         } else {
           toast({
             title: "➡️ Moving to Next Section",
@@ -416,10 +416,10 @@ const SectionTest = () => {
             description: `Your score: ${result.totalScore}/${result.maxScore}`,
           });
           
-          // Redirect to test result page to show detailed results
+          // FIXED: Redirect to simple completion page
           setTimeout(() => {
-            navigate(`/student/test-result/${testId}`);
-          }, 2000);
+            navigate('/student/test-complete');
+          }, 1000);
         } else if (result.sectionCompleted) {
           toast({
             title: "Section Completed!",

@@ -51,6 +51,9 @@ interface Section {
   instructions: string;
   type: "MCQ" | "Coding";
   correctMarks: number;
+  totalQuestions?: number;
+  displayQuestions?: number;
+  randomizeQuestions?: boolean;
   excelFile?: File | null;
   saved?: boolean;
   questions?: Question[];
@@ -116,6 +119,9 @@ const CreateTest = () => {
       instructions: "",
       type: "MCQ",
       correctMarks: 1,
+      totalQuestions: null,
+      displayQuestions: null,
+      randomizeQuestions: false,
       excelFile: null,
       saved: false,
       questions: [],
@@ -222,6 +228,9 @@ const CreateTest = () => {
           instructions: "",
           type: "MCQ",
           correctMarks: 1,
+          totalQuestions: null,
+          displayQuestions: null,
+          randomizeQuestions: false,
           excelFile: null,
           saved: false,
           questions: [],
@@ -1202,6 +1211,8 @@ const CreateTest = () => {
                           </div>
                         </div>
 
+
+
                         <div>
                           <Label>Section Instructions</Label>
                           <Textarea
@@ -1231,7 +1242,7 @@ const CreateTest = () => {
                             
                             {/* Added Questions List - Always visible */}
                             {section.questions && section.questions.length > 0 && (
-                              <div className="mt-4 space-y-2">
+                              <div className="mt-4 space-y-4">
                                 <Label className="text-sm font-medium">Added Questions ({section.questions.length})</Label>
                                 <div className="max-h-40 overflow-y-auto space-y-2">
                                   {section.questions.map((question, qIndex) => (
@@ -1268,6 +1279,61 @@ const CreateTest = () => {
                                       </div>
                                     </div>
                                   ))}
+                                </div>
+                                
+                                {/* Question Randomization Options - Only show when questions exist */}
+                                <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+                                  <Label className="text-base font-medium text-blue-800 mb-3 block flex items-center gap-2">
+                                    🎲 Question Randomization Settings
+                                  </Label>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <Label className="text-sm font-medium text-gray-700">Questions to Display</Label>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        max={section.questions.length}
+                                        placeholder={`Max: ${section.questions.length}`}
+                                        value={section.displayQuestions || ""}
+                                        onChange={(e) => {
+                                          const value = parseInt(e.target.value) || null;
+                                          if (value && value > section.questions!.length) {
+                                            toast({
+                                              title: "Invalid Number",
+                                              description: `Cannot display more than ${section.questions!.length} questions`,
+                                              variant: "destructive",
+                                            });
+                                            return;
+                                          }
+                                          updateSection(section.id, "displayQuestions", value);
+                                        }}
+                                        className="mt-1"
+                                      />
+                                      <p className="text-xs text-gray-600 mt-1">
+                                        From {section.questions.length} total questions
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center space-x-3 pt-6">
+                                      <input
+                                        type="checkbox"
+                                        id={`randomize-${section.id}`}
+                                        checked={section.randomizeQuestions || false}
+                                        onChange={(e) => updateSection(section.id, "randomizeQuestions", e.target.checked)}
+                                        className="rounded border-gray-300 text-blue-600 w-4 h-4"
+                                      />
+                                      <label htmlFor={`randomize-${section.id}`} className="text-sm cursor-pointer font-medium text-gray-700">
+                                        🔀 Shuffle & Randomize Questions
+                                      </label>
+                                    </div>
+                                  </div>
+                                  <div className="mt-3 p-3 bg-blue-100 rounded text-sm text-blue-700">
+                                    <strong>Preview:</strong> {section.displayQuestions ? 
+                                      `Each student will see ${section.displayQuestions} random questions from your ${section.questions.length} question pool` + 
+                                      (section.randomizeQuestions ? " in shuffled order" : " in original order") :
+                                      `All ${section.questions.length} questions will be shown to students` + 
+                                      (section.randomizeQuestions ? " in shuffled order" : " in original order")
+                                    }
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -1589,7 +1655,7 @@ const CreateTest = () => {
                             
                             {/* Added Coding Questions List */}
                             {section.codingQuestions && section.codingQuestions.length > 0 && (
-                              <div className="mt-4 space-y-2">
+                              <div className="mt-4 space-y-4">
                                 <Label className="text-sm font-medium">Added Coding Questions ({section.codingQuestions.length})</Label>
                                 <div className="max-h-40 overflow-y-auto space-y-2">
                                   {section.codingQuestions.map((question, qIndex) => (
@@ -1627,6 +1693,61 @@ const CreateTest = () => {
                                       </div>
                                     </div>
                                   ))}
+                                </div>
+                                
+                                {/* Coding Question Randomization Options */}
+                                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-lg border border-purple-200">
+                                  <Label className="text-base font-medium text-purple-800 mb-3 block flex items-center gap-2">
+                                    🎲 Coding Question Randomization
+                                  </Label>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                      <Label className="text-sm font-medium text-gray-700">Problems to Display</Label>
+                                      <Input
+                                        type="number"
+                                        min="1"
+                                        max={section.codingQuestions.length}
+                                        placeholder={`Max: ${section.codingQuestions.length}`}
+                                        value={section.displayQuestions || ""}
+                                        onChange={(e) => {
+                                          const value = parseInt(e.target.value) || null;
+                                          if (value && value > section.codingQuestions!.length) {
+                                            toast({
+                                              title: "Invalid Number",
+                                              description: `Cannot display more than ${section.codingQuestions!.length} coding problems`,
+                                              variant: "destructive",
+                                            });
+                                            return;
+                                          }
+                                          updateSection(section.id, "displayQuestions", value);
+                                        }}
+                                        className="mt-1"
+                                      />
+                                      <p className="text-xs text-gray-600 mt-1">
+                                        From {section.codingQuestions.length} total problems
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center space-x-3 pt-6">
+                                      <input
+                                        type="checkbox"
+                                        id={`randomize-coding-${section.id}`}
+                                        checked={section.randomizeQuestions || false}
+                                        onChange={(e) => updateSection(section.id, "randomizeQuestions", e.target.checked)}
+                                        className="rounded border-gray-300 text-purple-600 w-4 h-4"
+                                      />
+                                      <label htmlFor={`randomize-coding-${section.id}`} className="text-sm cursor-pointer font-medium text-gray-700">
+                                        🔀 Shuffle & Randomize Problems
+                                      </label>
+                                    </div>
+                                  </div>
+                                  <div className="mt-3 p-3 bg-purple-100 rounded text-sm text-purple-700">
+                                    <strong>Preview:</strong> {section.displayQuestions ? 
+                                      `Each student will see ${section.displayQuestions} random coding problems from your ${section.codingQuestions.length} problem pool` + 
+                                      (section.randomizeQuestions ? " in shuffled order" : " in original order") :
+                                      `All ${section.codingQuestions.length} coding problems will be shown to students` + 
+                                      (section.randomizeQuestions ? " in shuffled order" : " in original order")
+                                    }
+                                  </div>
                                 </div>
                               </div>
                             )}

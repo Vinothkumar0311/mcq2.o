@@ -1,10 +1,11 @@
-const { Test, Section, MCQ, CodingQuestion, TestAssignment, TestSession, sequelize } = require("../models");
+const { Test, Section, MCQ, CodingQuestion, TestAssignment, TestSession, StudentsResults, StudentViolation, sequelize } = require("../models");
 const { Op } = require('sequelize');
 const generateTestId = require("../utils/generateTestId");
 const generateUniqueTestName = require("../utils/generateUniqueTestName");
 const parseMCQExcel = require("../utils/parseMCQExcel");
 const validateExcelStructure = require("../utils/validateExcel");
 const { sanitizeForLog, sanitizeFilePath } = require('../utils/security');
+// const { StudentsResults } = require('../models'); // adjust import as needed
 const fs = require("fs");
 const path = require("path");
 
@@ -59,7 +60,7 @@ exports.createTest = async (req, res) => {
           type: section.type || 'MCQ',
           correctMarks: section.correctMarks || 1,
           instructions: section.instructions || '',
-          testId: test.testId,
+          testId: test.testId
         }, { transaction });
 
         // Handle Excel file upload for this section
@@ -99,7 +100,7 @@ exports.createTest = async (req, res) => {
             
                     // Clean up uploaded file after processing
             try {
-              const safePath = sanitizeFilePath(sectionFile.path, path.join(__dirname, '../uploads'));
+              const safePath = sanitizeFilePath(sectionFile.path, path.join(__dirname, '../../uploads'));
               if (safePath && fs.existsSync(safePath)) {
                 fs.unlinkSync(safePath);
                 console.log(`Cleaned up file: ${sanitizeForLog(safePath)}`);
@@ -274,7 +275,7 @@ exports.updateTest = async (req, res) => {
           type: section.type || 'MCQ',
           correctMarks: section.correctMarks || 1,
           instructions: section.instructions || '',
-          testId: testId,
+          testId: testId
         }, { transaction });
 
         // Handle Excel file upload for this section
@@ -642,6 +643,26 @@ exports.checkTestEligibility = async (req, res) => {
 
     // Check if student has already completed this test
     if (studentId) {
+      // Check for active violations first
+      const activeViolation = await StudentViolation.findOne({
+        where: { 
+          studentId,
+          status: 'Blocked'
+        }
+      });
+
+      if (activeViolation) {
+        return res.json({
+          success: false,
+          canStart: false,
+          canBegin: false,
+          blocked: true,
+          message: `You are blocked from taking tests due to a ${activeViolation.violationType} violation. Contact admin for assistance.`,
+          violationType: activeViolation.violationType,
+          violationDescription: activeViolation.description
+        });
+      }
+
       const existingSession = await TestSession.findOne({
         where: { 
           testId, 
@@ -743,5 +764,85 @@ exports.checkTestEligibility = async (req, res) => {
       success: false,
       error: 'Failed to check test eligibility'
     });
+  }
+};
+
+
+
+
+// ✅ Check if a specific student has already submitted a test
+// exports.checkSubmissionStatus = async (req, res) => {
+//   console.log("Checking submission status with query:", JSON.stringify(req.query));
+//   try {
+//     const { testId, email } = req.query;
+//     console.log(`Parameters - testId: ${sanitizeForLog(testId)}, email: ${sanitizeForLog(email)}`);
+
+//     if (!testId || !email) {
+//       return res.status(400).json({ success: false, message: "Missing parameters" });
+//     }
+
+//     const result = await StudentsResults.findOne({
+//       where: { testId, userEmail: email }
+//     });
+
+//     console.log(`Submission check result for testId ${sanitizeForLog(testId)} and email ${sanitizeForLog(email)}:`, result ? "Found" : "Not Found");
+
+//     if (result === "Found") {
+//       return res.json({ success: true, submitted: true });
+//     }
+
+//     return res.json({ success: true, submitted: false });
+//   } catch (error) {
+//     console.error("Error checking submission:", error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
+exports.checkSubmissionStatus = async (req, res) => {
+  console.log("Checking submission status with query:", JSON.stringify(req.query));
+  
+  try {
+    const { testId, email } = req.query;
+    console.log(`Parameters - testId: ${sanitizeForLog(testId)}, email: ${sanitizeForLog(email)}`);
+
+    if (!testId || !email) {
+      return res.status(400).json({ success: false, message: "Missing parameters" });
+    }
+
+    // Check for active violations
+    const activeViolation = await StudentViolation.findOne({
+      where: { 
+        studentId: email,
+        status: 'Blocked'
+      }
+    });
+
+    if (activeViolation) {
+      return res.json({ 
+        success: false, 
+        submitted: false,
+        blocked: true,
+        message: `Student is blocked due to ${activeViolation.violationType} violation`
+      });
+    }
+
+    const result = await StudentsResults.findOne({
+      where: { testId, userEmail: email }
+    });
+
+    console.log(
+      `Submission check result for testId ${sanitizeForLog(testId)} and email ${sanitizeForLog(email)}:`,
+      result ? "Found" : "Not Found"
+    );
+
+    if (result) {
+      return res.json({ success: true, submitted: true });
+    }
+
+    return res.json({ success: true, submitted: false });
+
+  } catch (error) {
+    console.error("Error checking submission:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };

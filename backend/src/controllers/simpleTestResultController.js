@@ -27,14 +27,14 @@ exports.storeTestResult = async (req, res) => {
       testName,
       userEmail,
       studentName,
-      department,
-      sinNumber,
-      totalScore,
-      maxScore,
-      percentage,
-      completedAt,
-      date,
-      answers: JSON.stringify(answers),
+      department: department || 'N/A',
+      sinNumber: sinNumber || 'N/A',
+      totalScore: totalScore || 0,
+      maxScore: maxScore || 0,
+      percentage: percentage || 0,
+      completedAt: completedAt || new Date(),
+      date: date || new Date().toISOString().split('T')[0],
+      answers: JSON.stringify(answers || {}),
       sessionId: sessionId || `session_${testId}_${Date.now()}`
     });
 
